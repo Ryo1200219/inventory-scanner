@@ -35,36 +35,38 @@
       document.getElementById('inputArea').style.display = 'block';
     });
 
-function sendData() {
-  const qty = document.getElementById('qty').value;
-  if (!qty) { alert("数量を入力してください"); return; }
+    function sendData() {
+      const qtyInput = document.getElementById('qty');
+      const qty = qtyInput.value;
+      const registerBtn = document.querySelector('button'); // 登録ボタンを取得
 
-  const data = {
-    jan: currentJan,
-    qty: qty
-  };
+      if (!qty) { alert("数量を入力してください"); return; }
 
-  // 送信前にアラートを出して確認（テスト用）
-  console.log("送信データ:", data);
+      // ★ここを追加：二重送信防止のためにボタンをロックする
+      registerBtn.disabled = true;
+      registerBtn.innerText = "送信中...";
+      registerBtn.style.backgroundColor = "#ccc";
 
-  fetch(GAS_URL, {
-    method: "POST",
-    mode: "no-cors", // GASへのクロスドメイン通信に必須
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(data)
-  })
-  .then(response => {
-    // mode: "no-cors" の場合、レスポンスの中身は見られませんが、
-    // ここまで来れば通信自体はGASに到達しています。
-    alert("送信処理を完了しました。スプレッドシートを確認してください。");
-    location.reload();
-  })
-  .catch(error => {
-    alert("通信エラーが発生しました: " + error);
-  });
-}
+      const data = { jan: currentJan, qty: qty };
+
+      fetch(GAS_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      })
+      .then(() => {
+        alert("登録しました！");
+        location.reload();
+      })
+      .catch(error => {
+        alert("エラーが発生しました: " + error);
+        // エラー時はボタンを戻す
+        registerBtn.disabled = false;
+        registerBtn.innerText = "登録";
+        registerBtn.style.backgroundColor = "#007bff";
+      });
+    }
   </script>
 </body>
 </html>
