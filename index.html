@@ -6,65 +6,72 @@
   <title>在庫管理スキャナー</title>
   <style>
     body { font-family: sans-serif; text-align: center; padding: 20px; }
-    #reader { width: 100%; max-width: 400px; margin: 20px auto; }
-    input { padding: 10px; font-size: 1.2rem; width: 80%; margin: 10px 0; }
-    button { padding: 15px 30px; font-size: 1rem; background: #007bff; color: white; border: none; border-radius: 5px; }
+    #reader { width: 100%; max-width: 500px; margin: 20px auto; }
+    input { padding: 15px; font-size: 1.5rem; width: 80%; margin: 10px 0; border: 2px solid #ccc; border-radius: 5px; }
+    button { padding: 15px 30px; font-size: 1.2rem; background: #007bff; color: white; border: none; border-radius: 5px; width: 80%; }
+    /* ボタンが無効化された時の見た目 */
+    button:disabled { background: #ccc !important; cursor: not-allowed; }
   </style>
 </head>
 <body>
   <h3>在庫管理スキャナー</h3>
   <div id="reader"></div>
   <div id="inputArea" style="display:none;">
-    <p id="janText"></p>
-    <input type="number" id="qty" placeholder="数量を入力">
+    <p id="janText" style="font-weight:bold;"></p>
+    <input type="number" id="qty" value="1" placeholder="数量を入力">
     <br>
-    <button onclick="sendData()">登録</button>
+    <button id="regBtn" onclick="sendData()">登録</button>
   </div>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; // ←ここを書き換えて！
+    const GAS_URL = "ここにあなたのURL"; // ←再度貼り付けてください
     let currentJan = "";
     
     const html5QrCode = new Html5Qrcode("reader");
-    html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (data) => {
+    
+    // スキャン開始：qrboxを横長にして読み取りやすく調整
+    html5QrCode.start({ facingMode: "environment" }, { 
+      fps: 10, 
+      qrbox: { width: 300, height: 150 } 
+    }, (data) => {
       currentJan = data;
       html5QrCode.stop();
       document.getElementById('reader').style.display = 'none';
       document.getElementById('janText').innerText = "JAN: " + data;
-      document.getElementById('inputArea').style.display = 'block';
+      
+      const inputArea = document.getElementById('inputArea');
+      inputArea.style.display = 'block';
+      
+      // ★改善：数量欄を自動選択してキーボードを出す
+      const qtyInput = document.getElementById('qty');
+      qtyInput.focus();
+      qtyInput.select(); 
     });
 
     function sendData() {
-      const qtyInput = document.getElementById('qty');
-      const qty = qtyInput.value;
-      const registerBtn = document.querySelector('button'); // 登録ボタンを取得
+      const qty = document.getElementById('qty').value;
+      const registerBtn = document.getElementById('regBtn');
 
       if (!qty) { alert("数量を入力してください"); return; }
 
-      // ★ここを追加：二重送信防止のためにボタンをロックする
       registerBtn.disabled = true;
       registerBtn.innerText = "送信中...";
-      registerBtn.style.backgroundColor = "#ccc";
-
-      const data = { jan: currentJan, qty: qty };
 
       fetch(GAS_URL, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify({ jan: currentJan, qty: qty })
       })
       .then(() => {
-        alert("登録しました！");
+        alert("登録完了！");
         location.reload();
       })
       .catch(error => {
-        alert("エラーが発生しました: " + error);
-        // エラー時はボタンを戻す
+        alert("エラー: " + error);
         registerBtn.disabled = false;
         registerBtn.innerText = "登録";
-        registerBtn.style.backgroundColor = "#007bff";
       });
     }
   </script>
