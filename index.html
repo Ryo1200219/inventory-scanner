@@ -35,18 +35,36 @@
       document.getElementById('inputArea').style.display = 'block';
     });
 
-    function sendData() {
-      const qty = document.getElementById('qty').value;
-      fetch(GAS_URL, {
-        method: "POST",
-        mode: "no-cors", // 重要：GASとの通信を成功させるための設定
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jan: currentJan, qty: qty })
-      }).then(() => {
-        alert("登録しました！");
-        location.reload();
-      });
-    }
+function sendData() {
+  const qty = document.getElementById('qty').value;
+  if (!qty) { alert("数量を入力してください"); return; }
+
+  const data = {
+    jan: currentJan,
+    qty: qty
+  };
+
+  // 送信前にアラートを出して確認（テスト用）
+  console.log("送信データ:", data);
+
+  fetch(GAS_URL, {
+    method: "POST",
+    mode: "no-cors", // GASへのクロスドメイン通信に必須
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(data)
+  })
+  .then(response => {
+    // mode: "no-cors" の場合、レスポンスの中身は見られませんが、
+    // ここまで来れば通信自体はGASに到達しています。
+    alert("送信処理を完了しました。スプレッドシートを確認してください。");
+    location.reload();
+  })
+  .catch(error => {
+    alert("通信エラーが発生しました: " + error);
+  });
+}
   </script>
 </body>
 </html>
