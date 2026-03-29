@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>在庫管理スキャナー</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    #reader { width: 100%; max-width: 400px; margin: 20px auto; }
+    input { padding: 10px; font-size: 1.2rem; width: 80%; margin: 10px 0; }
+    button { padding: 15px 30px; font-size: 1rem; background: #007bff; color: white; border: none; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h3>在庫管理スキャナー</h3>
+  <div id="reader"></div>
+  <div id="inputArea" style="display:none;">
+    <p id="janText"></p>
+    <input type="number" id="qty" placeholder="数量を入力">
+    <br>
+    <button onclick="sendData()">登録</button>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; // ←ここを書き換えて！
+    let currentJan = "";
+    
+    const html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 200 }, (data) => {
+      currentJan = data;
+      html5QrCode.stop();
+      document.getElementById('reader').style.display = 'none';
+      document.getElementById('janText').innerText = "JAN: " + data;
+      document.getElementById('inputArea').style.display = 'block';
+    });
+
+    function sendData() {
+      const qty = document.getElementById('qty').value;
+      fetch(GAS_URL, {
+        method: "POST",
+        mode: "no-cors", // 重要：GASとの通信を成功させるための設定
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jan: currentJan, qty: qty })
+      }).then(() => {
+        alert("登録しました！");
+        location.reload();
+      });
+    }
+  </script>
+</body>
+</html>
