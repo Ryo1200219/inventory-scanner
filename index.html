@@ -136,10 +136,9 @@ if ('serviceWorker' in navigator) {
       }
     }
 
-    // 起動時にデータを取ってからカメラを準備する
-    refreshInventory().then(() => {
-      startScanner();
-    });
+
+refreshInventory(); // 裏でこっそり読み込み開始
+    startScanner();    // 0秒でカメラ起動
   </script>
 </body>
 </html>
