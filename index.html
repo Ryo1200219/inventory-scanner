@@ -29,6 +29,17 @@
 
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script>
+    // 1. サービスワーカーを登録（これがないとAndroidはアプリと認めない）
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js').then(function(registration) {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }, function(err) {
+          console.log('ServiceWorker registration failed: ', err);
+        });
+      });
+    }
+    
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; // ←再度貼り付けてください
     let currentJan = "";
     
