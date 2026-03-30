@@ -29,103 +29,121 @@
 
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script>
-    function refreshInventory() {
-    console.log("在庫リストを更新中...");
-    fetch(GAS_URL)
-        .then(res => res.json())
-        .then(result => {
-            if (result.status === "success") {
-                localInventory = result.data;
-                console.log("在庫リストの同期完了", localInventory);
-            }
-        })
-        .catch(err => console.error("同期失敗:", err));
-    }
 
-  // 起動時に実行
-  refreshInventory();
-    
-    // 1. サービスワーカーを登録（これがないとAndroidはアプリと認めない）
+   const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; 
+
+    // サービスワーカーの登録（PWA化）
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('./sw.js').then(function(registration) {
-          console.log('ServiceWorker registration successful with scope: ', registration.scope);
-        }, function(err) {
-          console.log('ServiceWorker registration failed: ', err);
-        });
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SW登録成功', reg.scope))
+          .catch(err => console.log('SW登録失敗', err));
       });
     }
-    
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; // ←再度貼り付けてください
+
+    let html5QrCode;
     let currentJan = "";
-    let localInventory = {}; // ここに全在庫をキャッシュする
-    
-    const html5QrCode = new Html5Qrcode("reader");
-    
-    // スキャン開始：qrboxを横長にして読み取りやすく調整
-html5QrCode.start({ facingMode: "environment" }, { 
-      fps: 10, 
-      qrbox: { width: 300, height: 150 } 
-    }, (data) => {
-      currentJan = data;
-      
-      // カメラを止めて入力を準備
-      html5QrCode.stop().then(() => {
-        document.getElementById('reader').style.display = 'none';
-        document.getElementById('janText').innerText = "JAN: " + data;
-        document.getElementById('stockText').innerText = "在庫を確認中..."; // ローディング表示
-        
-        const inputArea = document.getElementById('inputArea');
-        inputArea.style.display = 'block';
+    let localInventory = {}; // ★スマホ側に保持する在庫データ
 
-        // ★追加：GASに現在のBY在庫を問い合わせる (GETリクエスト)
-        fetch(`${GAS_URL}?jan=${data}`)
-          .then(response => response.json())
-          .then(result => {
-            if (result.status === "success") {
-              document.getElementById('stockText').innerText = "BY現在庫: " + result.stock + " 個";
-            } else {
-              document.getElementById('stockText').innerText = "在庫数取得エラー";
-            }
-          })
-          .catch(() => {
-            document.getElementById('stockText').innerText = "在庫情報の取得に失敗";
-          });
-
-        // 数量入力へフォーカス
-        setTimeout(() => {
-          const qtyInput = document.getElementById('qty');
-          qtyInput.focus();
-          qtyInput.select();
-        }, 200);
-      });
-    });
-
-    function sendData() {
-      const qty = document.getElementById('qty').value;
-      const registerBtn = document.getElementById('regBtn');
-
-      if (!qty) { alert("数量を入力してください"); return; }
-
-      registerBtn.disabled = true;
-      registerBtn.innerText = "送信中...";
-
-      fetch(GAS_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jan: currentJan, qty: qty })
-      })
-      .then(() => {
-        alert("登録完了！");
-        location.reload();
-      })
-      .catch(error => {
-        alert("エラー: " + error);
-        registerBtn.disabled = false;
-        registerBtn.innerText = "登録";
-      });
+    // --- 1. GASから全在庫データを一括取得する関数 ---
+    async function refreshInventory() {
+      console.log("在庫リストを更新中...");
+      try {
+        const response = await fetch(GAS_URL);
+        const result = await response.json();
+        if (result.status === "success") {
+          localInventory = result.data;
+          console.log("在庫リストの同期完了", localInventory);
+        }
+      } catch (err) {
+        console.error("在庫データの取得に失敗しました", err);
+      }
     }
+
+    // 起動時に実行
+    refreshInventory();
+
+    // --- 2. カメラ起動 ---
+    function startScanner() {
+      document.getElementById('inputArea').style.display = 'none';
+      document.getElementById('reader').style.display = 'block';
+      document.getElementById('stockText').innerText = "";
+
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 280, height: 150 } },
+        (data) => {
+          currentJan = data;
+          // スキャン成功時の処理
+          html5QrCode.stop().then(() => {
+            document.getElementById('reader').style.display = 'none';
+            document.getElementById('janText').innerText = "JAN: " + data;
+            
+            // ★通信を待たずに、手元のデータから即座に表示！
+            const stock = localInventory[data] || 0;
+            document.getElementById('stockText').innerText = "BY現在庫: " + stock + " 個";
+            
+            const inputArea = document.getElementById('inputArea');
+            inputArea.style.display = 'block';
+
+            // 数量入力へ自動フォーカス
+            setTimeout(() => {
+              const qtyInput = document.getElementById('qty');
+              qtyInput.focus();
+              qtyInput.select();
+            }, 200);
+          });
+        }
+      ).catch(err => alert("カメラ起動エラー: " + err));
+    }
+
+    // --- 3. 在庫登録処理 ---
+    async function sendData() {
+      const qty = document.getElementById('qty').value;
+      if (!qty) return alert("数量を入れてね");
+
+      const btn = document.querySelector('button[onclick="sendData()"]');
+      btn.disabled = true;
+      btn.innerText = "送信中...";
+
+      try {
+        const params = new URLSearchParams({
+          jan: currentJan,
+          qty: qty
+        });
+
+        const response = await fetch(GAS_URL, {
+          method: "POST",
+          body: params
+        });
+
+        const result = await response.json();
+
+        if (result.status === "success") {
+          alert("登録完了！");
+          document.getElementById('qty').value = "1";
+          
+          // ★登録が成功したら、最新の在庫状況をバックグラウンドで再取得
+          refreshInventory();
+          
+          startScanner(); // 次のスキャンへ
+        } else {
+          alert("エラー: " + result.message);
+        }
+      } catch (err) {
+        alert("送信に失敗しました");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "登録";
+      }
+    }
+
+    // 最初のカメラ起動
+    startScanner();
   </script>
 </body>
 </html>
