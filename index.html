@@ -51,9 +51,13 @@
       try {
         const response = await fetch(GAS_URL);
         const result = await response.json();
+        
         if (result.status === "success") {
-          localInventory = result.data;
+          // ★ここを修正：result.data が確実にオブジェクトであることを保証する
+          localInventory = result.data || {}; 
           console.log("在庫リストの同期完了", localInventory);
+        } else {
+          console.error("GAS側のエラー:", result.message);
         }
       } catch (err) {
         console.error("在庫データの取得に失敗しました", err);
