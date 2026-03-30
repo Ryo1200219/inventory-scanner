@@ -46,11 +46,14 @@ if ('serviceWorker' in navigator) {
     async function refreshInventory() {
       console.log("在庫リストを更新中...");
       try {
-        const response = await fetch(GAS_URL);
+        // URLの末尾に ?t=1234567... と付けてキャッシュを無効化する
+        const cacheBuster = "?t=" + new Date().getTime();
+        const response = await fetch(GAS_URL + cacheBuster); 
         const result = await response.json();
+        
         if (result.status === "success" && result.data) {
           localInventory = result.data;
-          console.log("同期完了:", Object.keys(localInventory).length, "件のアイテム");
+          console.log("同期完了:", Object.keys(localInventory).length, "件");
           return true;
         }
       } catch (err) {
