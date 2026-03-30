@@ -63,10 +63,24 @@ if ('serviceWorker' in navigator) {
     }
 
     // --- 2. スキャン成功時の表示処理（ここが重要） ---
-    function displayStock(jan) {
-      // localInventory[jan] が undefined や null の場合は 0 を表示
-      const stock = (localInventory[jan] !== undefined) ? localInventory[jan] : 0;
-      document.getElementById('stockText').innerText = "BY現在庫: " + stock + " 個";
+    async function displayStock(jan) {
+      const stockStatus = document.getElementById('stockText');
+      const searchKey = String(jan).trim();
+
+      // もしデータがまだ空（初期状態）なら、少しだけ待機してリトライする
+      if (Object.keys(localInventory).length === 0) {
+        stockStatus.innerText = "データ同期中...";
+        // 0.5秒待ってから自分をもう一度呼び出す（最大3回くらいリトライ）
+        setTimeout(() => displayStock(jan), 500);
+        return;
+      }
+
+      const stock = localInventory[searchKey];
+      if (stock !== undefined) {
+        stockStatus.innerText = "BY現在庫: " + stock + " 個";
+      } else {
+        stockStatus.innerText = "BY現在庫: 0 (未登録)";
+      }
     }
 
     // --- 3. カメラ起動 ---
