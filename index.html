@@ -29,6 +29,22 @@
 
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script>
+    function refreshInventory() {
+    console.log("在庫リストを更新中...");
+    fetch(GAS_URL)
+        .then(res => res.json())
+        .then(result => {
+            if (result.status === "success") {
+                localInventory = result.data;
+                console.log("在庫リストの同期完了", localInventory);
+            }
+        })
+        .catch(err => console.error("同期失敗:", err));
+    }
+
+  // 起動時に実行
+  refreshInventory();
+    
     // 1. サービスワーカーを登録（これがないとAndroidはアプリと認めない）
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
@@ -42,6 +58,7 @@
     
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; // ←再度貼り付けてください
     let currentJan = "";
+    let localInventory = {}; // ここに全在庫をキャッシュする
     
     const html5QrCode = new Html5Qrcode("reader");
     
