@@ -40,38 +40,42 @@ if ('serviceWorker' in navigator) {
 
     let html5QrCode;
     let currentJan = "";
-    let localInventory = {}; // 初期値は空
+    let localInventory = {}; 
+    let isSyncing = false; // 同期中フラグ
 
-    // --- 1. 在庫リストを読み込む（取得完了まで待機させる仕組みを追加） ---
+    // --- 1. 在庫リストをバックグラウンドで読み込む ---
     async function refreshInventory() {
-      console.log("在庫リストを更新中...");
+      isSyncing = true;
+      console.log("同期開始...");
       try {
-        // URLの末尾に ?t=1234567... と付けてキャッシュを無効化する
         const cacheBuster = "?t=" + new Date().getTime();
-        const response = await fetch(GAS_URL + cacheBuster); 
+        const response = await fetch(GAS_URL + cacheBuster);
         const result = await response.json();
         
         if (result.status === "success" && result.data) {
-          localInventory = result.data;
+          // 型トラブルを防ぐため、すべて文字列キーで保存
+          localInventory = {};
+          for (let key in result.data) {
+            localInventory[String(key)] = result.data[key];
+          }
           console.log("同期完了:", Object.keys(localInventory).length, "件");
-          return true;
         }
       } catch (err) {
         console.error("同期失敗:", err);
+      } finally {
+        isSyncing = false;
       }
-      return false;
     }
 
-    // --- 2. スキャン成功時の表示処理（ここが重要） ---
-    async function displayStock(jan) {
+    // --- 2. 在庫表示（データがなければ待機してリトライ） ---
+    function displayStock(jan, retryCount = 0) {
       const stockStatus = document.getElementById('stockText');
       const searchKey = String(jan).trim();
-
-      // もしデータがまだ空（初期状態）なら、少しだけ待機してリトライする
-      if (Object.keys(localInventory).length === 0) {
-        stockStatus.innerText = "データ同期中...";
-        // 0.5秒待ってから自分をもう一度呼び出す（最大3回くらいリトライ）
-        setTimeout(() => displayStock(jan), 500);
+      
+      // データがまだ届いていない場合（リトライ5回＝約2.5秒まで待つ）
+      if (Object.keys(localInventory).length === 0 && retryCount < 5) {
+        stockStatus.innerText = "データ同期中...⏳";
+        setTimeout(() => displayStock(jan, retryCount + 1), 500);
         return;
       }
 
@@ -79,11 +83,12 @@ if ('serviceWorker' in navigator) {
       if (stock !== undefined) {
         stockStatus.innerText = "BY現在庫: " + stock + " 個";
       } else {
+        // 同期が終わっても見つからない場合は「0」
         stockStatus.innerText = "BY現在庫: 0 (未登録)";
       }
     }
 
-    // --- 3. カメラ起動 ---
+    // --- 3. カメラ起動（データの完了を待たずに即実行） ---
     function startScanner() {
       document.getElementById('inputArea').style.display = 'none';
       document.getElementById('reader').style.display = 'block';
@@ -102,7 +107,7 @@ if ('serviceWorker' in navigator) {
             document.getElementById('reader').style.display = 'none';
             document.getElementById('janText').innerText = "JAN: " + data;
             
-            // ★手元のデータから表示
+            // ★ここで「賢い表示」を呼び出す
             displayStock(data);
             
             document.getElementById('inputArea').style.display = 'block';
@@ -134,13 +139,14 @@ if ('serviceWorker' in navigator) {
         if (result.status === "success") {
           alert("登録完了！");
 
-          // ★手元の数値を即時更新（文字列結合を防ぐためparseInt）
-          const current = parseInt(localInventory[currentJan] || 0);
-          localInventory[currentJan] = current + parseInt(qty);
+          // 手元の数値を即時更新（UIの反応を最優先）
+          const searchKey = String(currentJan).trim();
+          const current = parseInt(localInventory[searchKey] || 0);
+          localInventory[searchKey] = current + parseInt(qty);
 
           qtyInput.value = "1";
           startScanner();
-          refreshInventory(); // バックグラウンドで最新同期
+          refreshInventory(); // 裏で最新状態を再取得
         }
       } catch (err) {
         alert("送信失敗");
@@ -150,9 +156,9 @@ if ('serviceWorker' in navigator) {
       }
     }
 
-
-refreshInventory(); // 裏でこっそり読み込み開始
-    startScanner();    // 0秒でカメラ起動
+    // 【ここがポイント】並列で実行！
+    refreshInventory(); 
+    startScanner();
   </script>
 </body>
 </html>
