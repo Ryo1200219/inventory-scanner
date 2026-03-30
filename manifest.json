@@ -1,19 +1,19 @@
 {
   "name": "BY在庫管理スキャナー",
   "short_name": "BY在庫",
-  "start_url": "index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#007bff",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "./inventory-scanner.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "inventory-scanner.png",
+      "src": "./inventory-scanner.png",
       "sizes": "512x512",
       "type": "image/png"
     }
