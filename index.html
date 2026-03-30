@@ -125,12 +125,20 @@
 
         if (result.status === "success") {
           alert("登録完了！");
+
+          // ★【追加】ネットの返事を待たずに、手元の数字を自分で書き換える
+          // いま入力した数量（qty）を、現在の在庫（localInventory[currentJan]）に加算
+          const currentStock = parseInt(localInventory[currentJan] || 0);
+          const inputQty = parseInt(qty);
+          localInventory[currentJan] = currentStock + inputQty; 
+
           document.getElementById('qty').value = "1";
           
-          // ★登録が成功したら、最新の在庫状況をバックグラウンドで再取得
-          refreshInventory();
+          // バックグラウンドで本当の最新値を取る（これは保険として残してOK）
+          refreshInventory(); 
           
-          startScanner(); // 次のスキャンへ
+          startScanner(); 
+        }
         } else {
           alert("エラー: " + result.message);
         }
