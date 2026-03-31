@@ -29,43 +29,50 @@
 
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script>
-
-   const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; 
-
-if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW登録失敗', err));
-      });
-    }
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; 
 
     let html5QrCode;
     let currentJan = "";
     let localInventory = {}; 
     let isSyncing = false; // 同期中フラグ
 
+    // --- 0. Service Worker 登録（強制リロード機能付き） ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          reg.onupdatefound = () => {
+            const installingWorker = reg.installing;
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('新バージョンを検出。リロードします。');
+                location.reload();
+              }
+            };
+          };
+        }).catch(err => console.log('SW登録失敗', err));
+      });
+    }
 
-    // sw.js からバージョン情報を自動取得して表示する関数
+    // --- 1. sw.js からバージョン情報を自動取得 ---
     async function updateVersionDisplay() {
-      const resp = await fetch('./sw.js?t=' + new Date().getTime());
-      const txt = await resp.text();
-      const m = txt.match(/CACHE_NAME\s*=\s*['"](.+?)['"]/);
-      if(m) document.getElementById('app-version').innerText = m[1].split('-').pop().toUpperCase();
+      try {
+        const resp = await fetch('./sw.js?t=' + new Date().getTime());
+        const txt = await resp.text();
+        const m = txt.match(/CACHE_NAME\s*=\s*['"](.+?)['"]/);
+        if(m) document.getElementById('app-version').innerText = m[1].split('-').pop().toUpperCase();
+      } catch(e) { console.log("Ver表示失敗"); }
     }
     updateVersionDisplay();
 
-    // Service Worker 登録 (さっきの強制リロード付きのやつ)
-    if ('serviceWorker' in navigator) { ... }
-
-    // --- 1. 在庫リストをバックグラウンドで読み込む ---
+    // --- 2. 在庫リストをバックグラウンドで読み込む ---
     async function refreshInventory() {
-      if (isSyncing) return; // 二重に走らせない
+      if (isSyncing) return;
       isSyncing = true;
       console.log("同期開始...");
       try {
         const cacheBuster = "?t=" + new Date().getTime();
         const response = await fetch(GAS_URL + cacheBuster);
         const result = await response.json();
-        
         if (result.status === "success" && result.data) {
           localInventory = {};
           for (let key in result.data) {
@@ -76,16 +83,15 @@ if ('serviceWorker' in navigator) {
       } catch (err) {
         console.error("同期失敗:", err);
       } finally {
-        isSyncing = false; // ★ここで「終わったよ！」とフラグを下ろす
+        isSyncing = false;
       }
     }
 
-    // --- 2. 在庫表示（データがなければ待機してリトライ） ---
+    // --- 3. 在庫表示（待ち合わせ機能付き） ---
     async function displayStock(jan) {
       const stockStatus = document.getElementById('stockText');
       const searchKey = String(jan).trim();
 
-      // ★同期中なら、終わるまで200ミリ秒ごとにチェックして待つ
       if (isSyncing) {
         stockStatus.innerText = "最新データ取得中...⏳";
         while (isSyncing) {
@@ -93,7 +99,6 @@ if ('serviceWorker' in navigator) {
         }
       }
 
-      // 同期が終わったので在庫をチェック
       const stock = localInventory[searchKey];
       if (stock !== undefined) {
         stockStatus.innerText = "BY現在庫: " + stock + " 個";
@@ -102,7 +107,7 @@ if ('serviceWorker' in navigator) {
       }
     }
 
-    // --- 3. カメラ起動（データの完了を待たずに即実行） ---
+    // --- 4. カメラ起動 ---
     function startScanner() {
       document.getElementById('inputArea').style.display = 'none';
       document.getElementById('reader').style.display = 'block';
@@ -117,12 +122,11 @@ if ('serviceWorker' in navigator) {
         { fps: 10, qrbox: { width: 280, height: 150 } },
         (data) => {
           currentJan = data;
-          html5QrCode.stop().then(() => {
+          html5QrCode.stop().then(async () => { // asyncを追加
             document.getElementById('reader').style.display = 'none';
             document.getElementById('janText').innerText = "JAN: " + data;
             
-            // ★ここで「賢い表示」を呼び出す
-            displayStock(data);
+            await displayStock(data); // 終わるまで待って表示
             
             document.getElementById('inputArea').style.display = 'block';
             setTimeout(() => {
@@ -135,13 +139,13 @@ if ('serviceWorker' in navigator) {
       ).catch(err => console.error(err));
     }
 
-    // --- 4. データ送信 ---
+    // --- 5. データ送信 ---
     async function sendData() {
       const qtyInput = document.getElementById('qty');
       const qty = qtyInput.value;
       if (!qty) return alert("数量を入れてね");
 
-      const btn = document.querySelector('button[onclick="sendData()"]');
+      const btn = document.getElementById('regBtn');
       btn.disabled = true;
       btn.innerText = "送信中...";
 
@@ -152,15 +156,12 @@ if ('serviceWorker' in navigator) {
 
         if (result.status === "success") {
           alert("登録完了！");
-
-          // 手元の数値を即時更新（UIの反応を最優先）
           const searchKey = String(currentJan).trim();
           const current = parseInt(localInventory[searchKey] || 0);
           localInventory[searchKey] = current + parseInt(qty);
-
           qtyInput.value = "1";
           startScanner();
-          refreshInventory(); // 裏で最新状態を再取得
+          refreshInventory(); // 裏で最新状態を再取得（isSyncingがtrueになる）
         }
       } catch (err) {
         alert("送信失敗");
@@ -170,7 +171,7 @@ if ('serviceWorker' in navigator) {
       }
     }
 
-    // 【ここがポイント】並列で実行！
+    // 実行
     refreshInventory(); 
     startScanner();
   </script>
