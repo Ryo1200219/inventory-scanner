@@ -46,23 +46,15 @@ if ('serviceWorker' in navigator) {
 
     // sw.js からバージョン情報を自動取得して表示する関数
     async function updateVersionDisplay() {
-      try {
-        const response = await fetch('./sw.js');
-        const text = await response.text();
-        // sw.js 内の CACHE_NAME = 'by-zaiko-v4' のような記述から 'v4' を抜き出す
-        const match = text.match(/CACHE_NAME\s*=\s*['"](.+?)['"]/);
-        if (match && match[1]) {
-          const version = match[1].split('-').pop(); // 'by-zaiko-v4' -> 'v4'
-          document.getElementById('app-version').innerText = version.toUpperCase();
-        }
-      } catch (err) {
-        console.log("バージョン取得失敗", err);
-        document.getElementById('app-version').innerText = "";
-      }
+      const resp = await fetch('./sw.js?t=' + new Date().getTime());
+      const txt = await resp.text();
+      const m = txt.match(/CACHE_NAME\s*=\s*['"](.+?)['"]/);
+      if(m) document.getElementById('app-version').innerText = m[1].split('-').pop().toUpperCase();
     }
-
-    // 起動時に実行
     updateVersionDisplay();
+
+    // Service Worker 登録 (さっきの強制リロード付きのやつ)
+    if ('serviceWorker' in navigator) { ... }
 
     // --- 1. 在庫リストをバックグラウンドで読み込む ---
     async function refreshInventory() {
