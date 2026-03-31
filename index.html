@@ -43,6 +43,27 @@ if ('serviceWorker' in navigator) {
     let localInventory = {}; 
     let isSyncing = false; // 同期中フラグ
 
+
+    // sw.js からバージョン情報を自動取得して表示する関数
+    async function updateVersionDisplay() {
+      try {
+        const response = await fetch('./sw.js');
+        const text = await response.text();
+        // sw.js 内の CACHE_NAME = 'by-zaiko-v4' のような記述から 'v4' を抜き出す
+        const match = text.match(/CACHE_NAME\s*=\s*['"](.+?)['"]/);
+        if (match && match[1]) {
+          const version = match[1].split('-').pop(); // 'by-zaiko-v4' -> 'v4'
+          document.getElementById('app-version').innerText = version.toUpperCase();
+        }
+      } catch (err) {
+        console.log("バージョン取得失敗", err);
+        document.getElementById('app-version').innerText = "";
+      }
+    }
+
+    // 起動時に実行
+    updateVersionDisplay();
+
     // --- 1. 在庫リストをバックグラウンドで読み込む ---
     async function refreshInventory() {
       if (isSyncing) return; // 二重に走らせない
