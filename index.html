@@ -45,6 +45,7 @@ if ('serviceWorker' in navigator) {
 
     // --- 1. 在庫リストをバックグラウンドで読み込む ---
     async function refreshInventory() {
+      if (isSyncing) return; // 二重に走らせない
       isSyncing = true;
       console.log("同期開始...");
       try {
@@ -53,38 +54,38 @@ if ('serviceWorker' in navigator) {
         const result = await response.json();
         
         if (result.status === "success" && result.data) {
-          // 型トラブルを防ぐため、すべて文字列キーで保存
           localInventory = {};
           for (let key in result.data) {
             localInventory[String(key)] = result.data[key];
           }
-          console.log("同期完了:", Object.keys(localInventory).length, "件");
+          console.log("同期完了");
         }
       } catch (err) {
         console.error("同期失敗:", err);
       } finally {
-        isSyncing = false;
+        isSyncing = false; // ★ここで「終わったよ！」とフラグを下ろす
       }
     }
 
     // --- 2. 在庫表示（データがなければ待機してリトライ） ---
-    function displayStock(jan, retryCount = 0) {
+    async function displayStock(jan) {
       const stockStatus = document.getElementById('stockText');
       const searchKey = String(jan).trim();
-      
-      // データがまだ届いていない場合（リトライ5回＝約2.5秒まで待つ）
-      if (Object.keys(localInventory).length === 0 && retryCount < 5) {
-        stockStatus.innerText = "データ同期中...⏳";
-        setTimeout(() => displayStock(jan, retryCount + 1), 500);
-        return;
+
+      // ★同期中なら、終わるまで200ミリ秒ごとにチェックして待つ
+      if (isSyncing) {
+        stockStatus.innerText = "最新データ取得中...⏳";
+        while (isSyncing) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
       }
 
+      // 同期が終わったので在庫をチェック
       const stock = localInventory[searchKey];
       if (stock !== undefined) {
         stockStatus.innerText = "BY現在庫: " + stock + " 個";
       } else {
-        // 同期が終わっても見つからない場合は「0」
-        stockStatus.innerText = "BY現在庫: 0 (未登録)";
+        stockStatus.innerText = "BY現在庫: 0 (未登録商品)";
       }
     }
 
