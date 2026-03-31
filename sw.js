@@ -1,4 +1,4 @@
-const CACHE_NAME = 'by-zaiko-v2';
+const CACHE_NAME = 'by-zaiko-v2.1';
 const ASSETS_TO_CACHE = [
   './index.html',
   './manifest.json',
