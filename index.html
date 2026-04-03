@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>在庫管理スキャナ</title>
+  <title>在庫管理スキャナー</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./inventory-scanner.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -154,15 +154,28 @@
         const response = await fetch(GAS_URL, { method: "POST", body: params });
         const result = await response.json();
 
+        // if (result.status === "success") {
+        //   alert("登録完了！");
+        //   const searchKey = String(currentJan).trim();
+        //   const current = parseInt(localInventory[searchKey] || 0);
+        //   localInventory[searchKey] = current + parseInt(qty);
+        //   qtyInput.value = "1";
+        //   startScanner();
+        //   refreshInventory(); // 裏で最新状態を再取得（isSyncingがtrueになる）
+        // }
         if (result.status === "success") {
-          alert("登録完了！");
+          // ローカルデータを即時更新
           const searchKey = String(currentJan).trim();
-          const current = parseInt(localInventory[searchKey] || 0);
-          localInventory[searchKey] = current + parseInt(qty);
+          const addQty = parseInt(qty, 10);
+          localInventory[searchKey] = (parseInt(localInventory[searchKey] || 0)) + addQty;
+          
+          // 表示を更新してからスキャナーへ
+          await displayStock(currentJan); 
+          alert("登録完了！現在の在庫: " + localInventory[searchKey]); 
+          
           qtyInput.value = "1";
           startScanner();
-          refreshInventory(); // 裏で最新状態を再取得（isSyncingがtrueになる）
-        }
+      }
       } catch (err) {
         alert("送信失敗");
       } finally {
