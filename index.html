@@ -26,22 +26,76 @@
         .drawingBuffer {
             display: none;
         }
-        /* スキャン線の演出 */
-        .scanner-laser {
+        
+        /* スキャンエリアのオーバーレイ */
+        .scanner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 5;
+        }
+
+        /* 横長のターゲットガイド枠 */
+        .scanner-guide {
             position: absolute;
             top: 50%;
-            left: 10%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             width: 80%;
-            height: 2px;
-            background: rgba(255, 0, 0, 0.5);
-            box-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
+            height: 120px;
+            border: 2px solid #3b82f6; /* Blue 500 */
+            border-radius: 8px;
+            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.3);
             z-index: 10;
-            animation: scan 2s infinite ease-in-out;
+            pointer-events: none;
         }
-        @keyframes scan {
-            0%, 100% { transform: translateY(-50px); }
-            50% { transform: translateY(50px); }
+
+        /* 枠の角の装飾 */
+        .scanner-guide::before, .scanner-guide::after {
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 4px solid #fff;
         }
+        /* Top Left */
+        .scanner-guide::before {
+            top: -4px;
+            left: -4px;
+            border-right: 0;
+            border-bottom: 0;
+            border-radius: 8px 0 0 0;
+        }
+        /* Bottom Right */
+        .scanner-guide::after {
+            bottom: -4px;
+            right: -4px;
+            border-left: 0;
+            border-top: 0;
+            border-radius: 0 0 8px 0;
+        }
+
+        /* スキャン線の演出 (ガイド枠内) */
+        .scanner-laser {
+            position: absolute;
+            top: 0;
+            left: 5%;
+            width: 90%;
+            height: 2px;
+            background: rgba(255, 0, 0, 0.7);
+            box-shadow: 0 0 12px rgba(255, 0, 0, 1);
+            z-index: 11;
+            animation: scan-line 2s infinite ease-in-out;
+        }
+        @keyframes scan-line {
+            0% { top: 10%; }
+            50% { top: 90%; }
+            100% { top: 10%; }
+        }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -65,7 +119,12 @@
         <!-- Scanner Section -->
         <div class="bg-white rounded-2xl shadow-sm p-4 mb-6 border border-gray-100">
             <div id="interactive" class="viewport mb-4 flex items-center justify-center text-white">
-                <div class="scanner-laser"></div>
+                <!-- ガイド枠とレーザー (スキャン中のみ表示を制御可能) -->
+                <div id="scanner-ui" class="hidden absolute inset-0 z-10">
+                    <div class="scanner-guide">
+                        <div class="scanner-laser"></div>
+                    </div>
+                </div>
                 <p id="scanner-placeholder" class="z-20">カメラを起動してください</p>
             </div>
             <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
@@ -136,7 +195,6 @@
         let currentCode = null;
         let isScannerRunning = false;
         
-        // 精度向上のためのバッファ
         let detectionBuffer = [];
 
         const resultCard = document.getElementById('result-card');
@@ -148,6 +206,7 @@
         const inventoryList = document.getElementById('inventory-list');
         const listCount = document.getElementById('list-count');
         const updateBtn = document.getElementById('update-btn');
+        const scannerUI = document.getElementById('scanner-ui');
 
         window.onload = loadSpreadsheetData;
         document.getElementById('start-btn').addEventListener('click', toggleScanner);
@@ -181,9 +240,7 @@
 
         function toggleScanner() {
             if (isScannerRunning) {
-                Quagga.stop();
-                isScannerRunning = false;
-                document.getElementById('start-btn').innerText = "スキャン開始";
+                stopScanner();
             } else {
                 startScanner();
             }
@@ -217,6 +274,7 @@
                 }
                 Quagga.start();
                 isScannerRunning = true;
+                scannerUI.classList.remove('hidden');
                 document.getElementById('start-btn').innerText = "カメラを停止";
                 document.getElementById('scanner-placeholder').style.display = 'none';
             });
@@ -224,10 +282,16 @@
             Quagga.onDetected(onDetected);
         }
 
+        function stopScanner() {
+            Quagga.stop();
+            isScannerRunning = false;
+            scannerUI.classList.add('hidden');
+            document.getElementById('start-btn').innerText = "スキャン開始";
+        }
+
         function onDetected(data) {
             const code = data.codeResult.code;
             
-            // 誤読防止ロジック: 3回連続で同じコードが検出されたら確定とする
             detectionBuffer.push(code);
             if (detectionBuffer.length < 3) return;
 
@@ -237,7 +301,6 @@
                 return;
             }
 
-            // 確定
             detectionBuffer = [];
             if (currentCode === code) return; 
             
@@ -256,11 +319,9 @@
             }
 
             resultCard.classList.remove('hidden');
-            Quagga.stop();
-            isScannerRunning = false;
+            stopScanner();
             document.getElementById('start-btn').innerText = "スキャン再開";
             
-            // 成功の触覚フィードバック（対応端末のみ）
             if (window.navigator.vibrate) window.navigator.vibrate(50);
         }
 

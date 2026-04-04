@@ -1,4 +1,4 @@
-const CACHE_NAME = 'by-zaiko-v1.1.1'; // ★バージョンを上げる
+const CACHE_NAME = 'by-zaiko-v1.1.2'; // ★バージョンを上げる
 const ASSETS_TO_CACHE = [
   './',                  // ルートもキャッシュに含めると安定します
   './index.html',
