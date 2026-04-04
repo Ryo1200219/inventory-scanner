@@ -1,176 +1,330 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>在庫管理スキャナー</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    body { font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
-    #reader { width: 100%; max-width: 500px; margin: auto; }
-    #inputArea { margin-top: 20px; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
-    #qty { width: 80px; font-size: 1.5rem; text-align: center; margin-bottom: 10px; }
-    #regBtn { padding: 10px 20px; font-size: 1.2rem; cursor: pointer; background: #28a745; color: white; border: none; border-radius: 5px; }
-    #app-version { font-size: 0.8rem; color: #888; margin-top: 20px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在庫管理スキャナー Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
+    <style>
+        #interactive.viewport {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            border-radius: 1rem;
+        }
+        #interactive.viewport canvas, video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .drawingBuffer {
+            display: none;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .scale-in-center {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+    </style>
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <div class="max-w-md mx-auto p-4">
+        <!-- Header -->
+        <header class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">在庫管理スキャナー</h1>
+            <div id="status-indicator" class="flex items-center text-sm text-gray-400">
+                <span id="status-dot" class="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
+                <span id="status-text">オフライン</span>
+            </div>
+        </header>
 
-  <h1>在庫管理スキャナー</h1>
-  <div id="app-version">Ver: LOADING...</div>
+        <!-- Scanner Section -->
+        <div class="bg-white rounded-2xl shadow-sm p-4 mb-6 border border-gray-100">
+            <div id="interactive" class="viewport mb-4 bg-black flex items-center justify-center text-white">
+                <p id="scanner-placeholder">カメラを起動してください</p>
+            </div>
+            <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                スキャン開始
+            </button>
+        </div>
 
-  <div id="reader"></div>
+        <!-- Result / Input Section -->
+        <div id="result-card" class="hidden bg-white rounded-2xl shadow-lg p-6 border-2 border-blue-500 mb-6 scale-in-center">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">読み取り完了</p>
+                    <h2 id="display-name" class="text-xl font-black text-gray-900">読み取り中...</h2>
+                    <p id="display-code" class="text-sm text-gray-400 font-mono"></p>
+                </div>
+                <button onclick="closeResult()" class="text-gray-400 hover:text-gray-600 p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
 
-  <div id="inputArea" style="display:none;">
-    <p id="janText" style="font-weight:bold; margin-bottom: 5px;"></p>
-    <p id="stockText" style="color: #28a745; font-weight: bold; font-size: 1.2rem; margin-top: 0;"></p>
-    <input type="number" id="qty" value="1" inputmode="decimal" pattern="\d*">
-    <br>
-    <button id="regBtn" onclick="sendData()">登録</button>
-    <br><br>
-    <button onclick="startScanner()">スキャンに戻る</button>
-  </div>
+            <!-- New Item Name Input -->
+            <div id="new-item-form" class="hidden mb-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <label class="block text-sm font-bold text-blue-700 mb-1">新しく商品名を登録：</label>
+                <input type="text" id="input-name" placeholder="例: お茶 500ml" class="w-full p-3 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-400 outline-none">
+            </div>
 
-  <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; 
+            <div class="flex items-center gap-4">
+                <div class="flex-1">
+                    <label class="block text-xs font-bold text-gray-400 mb-1">数量変更</label>
+                    <div class="flex items-center gap-3">
+                        <button onclick="adjustQuantity(-1)" class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-xl font-bold text-gray-600 hover:bg-gray-50">-</button>
+                        <input type="number" id="input-qty" value="0" class="w-16 text-center text-2xl font-bold border-none outline-none">
+                        <button onclick="adjustQuantity(1)" class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-xl font-bold text-gray-600 hover:bg-gray-50">+</button>
+                    </div>
+                </div>
+                <button id="update-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50">更新</button>
+            </div>
+        </div>
 
-    let html5QrCode;
-    let currentJan = "";
-    let localInventory = {}; 
-    let isSyncing = false;
+        <!-- Inventory List -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                <h3 class="font-bold text-gray-700">在庫一覧</h3>
+                <span id="list-count" class="text-xs font-bold bg-gray-200 text-gray-600 px-2 py-1 rounded-full">0件</span>
+            </div>
+            <ul id="inventory-list" class="divide-y divide-gray-50 max-h-[40vh] overflow-y-auto">
+                <li class="p-8 text-center text-gray-400 text-sm">データを読み込み中...</li>
+            </ul>
+        </div>
+    </div>
 
-    // Service Worker
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').then(reg => {
-          reg.onupdatefound = () => {
-            const installingWorker = reg.installing;
-            installingWorker.onstatechange = () => {
-              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                location.reload();
-              }
-            };
-          };
-        }).catch(err => console.log('SW登録失敗', err));
-      });
-    }
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 translate-y-20 opacity-0 bg-gray-900/90 backdrop-blur text-white px-6 py-3 rounded-full transition-all duration-300 shadow-xl flex items-center gap-2 z-50">
+        <span id="toast-message"></span>
+    </div>
 
-    async function updateVersionDisplay() {
-      try {
-        const resp = await fetch('./sw.js?t=' + new Date().getTime());
-        const txt = await resp.text();
-        const m = txt.match(/CACHE_NAME\s*=\s*['"](.+?)['"]/);
-        if(m) document.getElementById('app-version').innerText = "Ver: " + m[1].split('-').pop().toUpperCase();
-      } catch(e) { console.log("Ver表示失敗"); }
-    }
-    updateVersionDisplay();
+    <script>
+        /**
+         * 重要: GASをデプロイして取得したURLをここに貼り付けてください
+         */
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; 
 
-    async function refreshInventory() {
-      if (isSyncing) return;
-      isSyncing = true;
-      try {
-        const cacheBuster = "?t=" + new Date().getTime();
-        const response = await fetch(GAS_URL + cacheBuster);
-        const result = await response.json();
-        if (result.status === "success" && result.data) {
-          localInventory = result.data;
+        let productMaster = {}; 
+        let inventoryData = {}; 
+        let currentCode = null;
+        let isScannerRunning = false;
+
+        const resultCard = document.getElementById('result-card');
+        const displayName = document.getElementById('display-name');
+        const displayCode = document.getElementById('display-code');
+        const inputName = document.getElementById('input-name');
+        const newItemForm = document.getElementById('new-item-form');
+        const inputQty = document.getElementById('input-qty');
+        const inventoryList = document.getElementById('inventory-list');
+        const listCount = document.getElementById('list-count');
+        const updateBtn = document.getElementById('update-btn');
+
+        // Init App
+        window.onload = loadSpreadsheetData;
+        document.getElementById('start-btn').addEventListener('click', toggleScanner);
+        updateBtn.addEventListener('click', handleUpdate);
+
+        /**
+         * スプレッドシートから初期データを読み込む (doGet)
+         */
+        async function loadSpreadsheetData() {
+            if (GAS_URL === "YOUR_GAS_WEB_APP_URL") {
+                showToast("GASのURLを設定してください");
+                return;
+            }
+
+            try {
+                const response = await fetch(GAS_URL);
+                const data = await response.json();
+                productMaster = data.master || {};
+                inventoryData = data.inventory || {};
+                
+                updateStatus(true);
+                updateUIList();
+            } catch (e) {
+                console.error(e);
+                showToast("データ読み込みに失敗しました");
+                updateStatus(false);
+            }
         }
-      } catch (err) {
-        console.error("同期失敗:", err);
-      } finally {
-        isSyncing = false;
-      }
-    }
 
-    async function displayStock(jan) {
-      const stockStatus = document.getElementById('stockText');
-      const searchKey = String(jan).trim();
-      
-      // JANを表示
-      document.getElementById('janText').innerText = "JAN: " + searchKey;
-
-      if (isSyncing) {
-        stockStatus.innerText = "最新データ取得中...⏳";
-        while (isSyncing) {
-          await new Promise(resolve => setTimeout(resolve, 200));
+        function updateStatus(isOnline) {
+            const dot = document.getElementById('status-dot');
+            const text = document.getElementById('status-text');
+            if (isOnline) {
+                dot.className = "w-2 h-2 bg-green-500 rounded-full mr-2";
+                text.innerText = "同期済み";
+                text.className = "text-green-600";
+            } else {
+                dot.className = "w-2 h-2 bg-red-500 rounded-full mr-2";
+                text.innerText = "通信エラー";
+                text.className = "text-red-600";
+            }
         }
-      }
 
-      const stock = localInventory[searchKey];
-      if (stock !== undefined) {
-        stockStatus.innerText = "BY現在庫: " + stock + " 個";
-      } else {
-        stockStatus.innerText = "BY現在庫: 0 (未登録商品)";
-      }
-    }
+        function toggleScanner() {
+            if (isScannerRunning) {
+                Quagga.stop();
+                isScannerRunning = false;
+                document.getElementById('start-btn').innerText = "スキャン開始";
+            } else {
+                startScanner();
+            }
+        }
 
-    function startScanner() {
-      document.getElementById('inputArea').style.display = 'none';
-      document.getElementById('reader').style.display = 'block';
-      document.getElementById('stockText').innerText = "";
+        function startScanner() {
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#interactive'),
+                    constraints: { facingMode: "environment" },
+                },
+                decoder: { readers: ["ean_reader", "ean_8_reader"] }
+            }, function(err) {
+                if (err) {
+                    showToast("カメラを起動できません");
+                    return;
+                }
+                Quagga.start();
+                isScannerRunning = true;
+                document.getElementById('start-btn').innerText = "カメラを停止";
+                document.getElementById('scanner-placeholder').style.display = 'none';
+            });
 
-      if (!html5QrCode) {
-        html5QrCode = new Html5Qrcode("reader");
-      }
+            Quagga.onDetected(onDetected);
+        }
 
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 280, height: 150 } },
-        (data) => {
-          currentJan = data;
-          html5QrCode.stop().then(async () => {
-            document.getElementById('reader').style.display = 'none';
-            document.getElementById('inputArea').style.display = 'block';
+        function onDetected(data) {
+            const code = data.codeResult.code;
+            if (currentCode === code) return; 
             
-            // 通信中の表示を含む在庫表示処理を待つ
-            await displayStock(data); 
+            currentCode = code;
+            displayCode.innerText = `JAN: ${code}`;
             
+            if (productMaster[code]) {
+                displayName.innerText = productMaster[code];
+                newItemForm.classList.add('hidden');
+                inputQty.value = inventoryData[code] || 0;
+            } else {
+                displayName.innerText = "未登録の商品";
+                newItemForm.classList.remove('hidden');
+                inputName.value = "";
+                inputQty.value = 1;
+            }
+
+            resultCard.classList.remove('hidden');
+            Quagga.stop();
+            isScannerRunning = false;
+            document.getElementById('start-btn').innerText = "スキャン再開";
+        }
+
+        function adjustQuantity(val) {
+            let current = parseInt(inputQty.value) || 0;
+            inputQty.value = Math.max(0, current + val);
+        }
+
+        function closeResult() {
+            resultCard.classList.add('hidden');
+            currentCode = null;
+        }
+
+        /**
+         * 更新ボタン押下時の処理 (doPostへの送信)
+         */
+        async function handleUpdate() {
+            const name = productMaster[currentCode] || inputName.value.trim();
+            const qty = parseInt(inputQty.value) || 0;
+
+            if (!name) {
+                showToast("商品名を入力してください");
+                return;
+            }
+
+            updateBtn.disabled = true;
+            updateBtn.innerText = "送信中...";
+
+            try {
+                // スプレッドシートへ送信
+                const response = await fetch(GAS_URL, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        code: currentCode,
+                        name: name,
+                        qty: qty
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === "success") {
+                    // ローカルデータを更新
+                    productMaster[currentCode] = name;
+                    inventoryData[currentCode] = qty;
+                    updateUIList();
+                    showToast("スプレッドシートを更新しました");
+                    closeResult();
+                } else {
+                    throw new Error(result.message);
+                }
+            } catch (e) {
+                showToast("通信エラー: 保存できませんでした");
+                console.error(e);
+            } finally {
+                updateBtn.disabled = false;
+                updateBtn.innerText = "更新";
+            }
+        }
+
+        function updateUIList() {
+            inventoryList.innerHTML = "";
+            const entries = Object.entries(inventoryData);
+            listCount.innerText = `${entries.length}件`;
+
+            if (entries.length === 0) {
+                inventoryList.innerHTML = '<li class="p-8 text-center text-gray-400 text-sm">登録された在庫はありません</li>';
+                return;
+            }
+
+            // 在庫がある順に並び替え
+            entries.sort((a, b) => b[1] - a[1]).forEach(([code, qty]) => {
+                const name = productMaster[code] || "不明な商品";
+                const li = document.createElement('li');
+                li.className = "p-4 flex justify-between items-center bg-white hover:bg-gray-50 transition-colors";
+                li.innerHTML = `
+                    <div class="flex-1 pr-4">
+                        <p class="font-bold text-gray-800 truncate">${name}</p>
+                        <p class="text-xs text-gray-400 font-mono">${code}</p>
+                    </div>
+                    <div class="text-right whitespace-nowrap">
+                        <span class="text-2xl font-black ${qty <= 5 ? 'text-red-500' : 'text-blue-600'}">${qty}</span>
+                        <span class="text-xs font-bold text-gray-400 ml-1">個</span>
+                    </div>
+                `;
+                inventoryList.appendChild(li);
+            });
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
             setTimeout(() => {
-              const qty = document.getElementById('qty');
-              qty.focus();
-              qty.select();
-            }, 200);
-          });
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
         }
-      ).catch(err => console.error(err));
-    }
-
-    async function sendData() {
-      const qtyInput = document.getElementById('qty');
-      const qty = qtyInput.value;
-      if (!qty) return alert("数量を入れてね");
-
-      const btn = document.getElementById('regBtn');
-      btn.disabled = true;
-      btn.innerText = "送信中...";
-
-      try {
-        const params = new URLSearchParams({ jan: currentJan, qty: qty });
-        const response = await fetch(GAS_URL, { method: "POST", body: params });
-        const result = await response.json();
-
-        if (result.status === "success") {
-          const searchKey = String(currentJan).trim();
-          const addQty = parseInt(qty, 10);
-          localInventory[searchKey] = (parseInt(localInventory[searchKey] || 0)) + addQty;
-          
-          await displayStock(currentJan); 
-          alert("登録完了！現在の在庫: " + localInventory[searchKey]); 
-          
-          qtyInput.value = "1";
-          startScanner();
-          refreshInventory(); // 裏で最新状態を再取得
-        }
-      } catch (err) {
-        alert("送信失敗");
-      } finally {
-        btn.disabled = false;
-        btn.innerText = "登録";
-      }
-    }
-
-    refreshInventory(); 
-    startScanner();
-  </script>
+    </script>
 </body>
 </html>
