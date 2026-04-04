@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>在庫管理スキャナー Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
@@ -13,6 +13,7 @@
             height: 300px;
             overflow: hidden;
             border-radius: 1rem;
+            background: #000;
         }
         #interactive.viewport canvas, video {
             position: absolute;
@@ -24,6 +25,22 @@
         }
         .drawingBuffer {
             display: none;
+        }
+        /* スキャン線の演出 */
+        .scanner-laser {
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            width: 80%;
+            height: 2px;
+            background: rgba(255, 0, 0, 0.5);
+            box-shadow: 0 0 8px rgba(255, 0, 0, 0.8);
+            z-index: 10;
+            animation: scan 2s infinite ease-in-out;
+        }
+        @keyframes scan {
+            0%, 100% { transform: translateY(-50px); }
+            50% { transform: translateY(50px); }
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -47,8 +64,9 @@
 
         <!-- Scanner Section -->
         <div class="bg-white rounded-2xl shadow-sm p-4 mb-6 border border-gray-100">
-            <div id="interactive" class="viewport mb-4 bg-black flex items-center justify-center text-white">
-                <p id="scanner-placeholder">カメラを起動してください</p>
+            <div id="interactive" class="viewport mb-4 flex items-center justify-center text-white">
+                <div class="scanner-laser"></div>
+                <p id="scanner-placeholder" class="z-20">カメラを起動してください</p>
             </div>
             <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -74,7 +92,6 @@
                 </button>
             </div>
 
-            <!-- New Item Name Input -->
             <div id="new-item-form" class="hidden mb-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
                 <label class="block text-sm font-bold text-blue-700 mb-1">新しく商品名を登録：</label>
                 <input type="text" id="input-name" placeholder="例: お茶 500ml" class="w-full p-3 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-400 outline-none">
@@ -111,15 +128,16 @@
     </div>
 
     <script>
-        /**
-         * 重要: GASをデプロイして取得したURLをここに貼り付けてください
-         */
+        // デプロイしたGASのURL
         const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; 
 
         let productMaster = {}; 
         let inventoryData = {}; 
         let currentCode = null;
         let isScannerRunning = false;
+        
+        // 精度向上のためのバッファ
+        let detectionBuffer = [];
 
         const resultCard = document.getElementById('result-card');
         const displayName = document.getElementById('display-name');
@@ -131,31 +149,24 @@
         const listCount = document.getElementById('list-count');
         const updateBtn = document.getElementById('update-btn');
 
-        // Init App
         window.onload = loadSpreadsheetData;
         document.getElementById('start-btn').addEventListener('click', toggleScanner);
         updateBtn.addEventListener('click', handleUpdate);
 
-        /**
-         * スプレッドシートから初期データを読み込む (doGet)
-         */
         async function loadSpreadsheetData() {
-            if (GAS_URL === "YOUR_GAS_WEB_APP_URL") {
-                showToast("GASのURLを設定してください");
+            if (!GAS_URL || GAS_URL.includes("YOUR_GAS")) {
+                showToast("GAS URL未設定");
                 return;
             }
-
             try {
                 const response = await fetch(GAS_URL);
                 const data = await response.json();
                 productMaster = data.master || {};
                 inventoryData = data.inventory || {};
-                
                 updateStatus(true);
                 updateUIList();
             } catch (e) {
-                console.error(e);
-                showToast("データ読み込みに失敗しました");
+                showToast("データ同期エラー");
                 updateStatus(false);
             }
         }
@@ -163,15 +174,9 @@
         function updateStatus(isOnline) {
             const dot = document.getElementById('status-dot');
             const text = document.getElementById('status-text');
-            if (isOnline) {
-                dot.className = "w-2 h-2 bg-green-500 rounded-full mr-2";
-                text.innerText = "同期済み";
-                text.className = "text-green-600";
-            } else {
-                dot.className = "w-2 h-2 bg-red-500 rounded-full mr-2";
-                text.innerText = "通信エラー";
-                text.className = "text-red-600";
-            }
+            dot.className = `w-2 h-2 ${isOnline ? 'bg-green-500' : 'bg-red-500'} rounded-full mr-2`;
+            text.innerText = isOnline ? "同期済み" : "接続エラー";
+            text.className = isOnline ? "text-green-600" : "text-red-600";
         }
 
         function toggleScanner() {
@@ -190,9 +195,21 @@
                     name: "Live",
                     type: "LiveStream",
                     target: document.querySelector('#interactive'),
-                    constraints: { facingMode: "environment" },
+                    constraints: {
+                        width: { min: 640, ideal: 1280 },
+                        height: { min: 480, ideal: 720 },
+                        facingMode: "environment",
+                        aspectRatio: { ideal: 1.7777777778 }
+                    },
                 },
-                decoder: { readers: ["ean_reader", "ean_8_reader"] }
+                locator: {
+                    patchSize: "medium",
+                    halfSample: true
+                },
+                decoder: {
+                    readers: ["ean_reader", "ean_8_reader"],
+                    multiple: false
+                }
             }, function(err) {
                 if (err) {
                     showToast("カメラを起動できません");
@@ -209,6 +226,19 @@
 
         function onDetected(data) {
             const code = data.codeResult.code;
+            
+            // 誤読防止ロジック: 3回連続で同じコードが検出されたら確定とする
+            detectionBuffer.push(code);
+            if (detectionBuffer.length < 3) return;
+
+            const isConsistent = detectionBuffer.every(c => c === code);
+            if (!isConsistent) {
+                detectionBuffer.shift();
+                return;
+            }
+
+            // 確定
+            detectionBuffer = [];
             if (currentCode === code) return; 
             
             currentCode = code;
@@ -229,6 +259,9 @@
             Quagga.stop();
             isScannerRunning = false;
             document.getElementById('start-btn').innerText = "スキャン再開";
+            
+            // 成功の触覚フィードバック（対応端末のみ）
+            if (window.navigator.vibrate) window.navigator.vibrate(50);
         }
 
         function adjustQuantity(val) {
@@ -239,11 +272,9 @@
         function closeResult() {
             resultCard.classList.add('hidden');
             currentCode = null;
+            detectionBuffer = [];
         }
 
-        /**
-         * 更新ボタン押下時の処理 (doPostへの送信)
-         */
         async function handleUpdate() {
             const name = productMaster[currentCode] || inputName.value.trim();
             const qty = parseInt(inputQty.value) || 0;
@@ -257,31 +288,22 @@
             updateBtn.innerText = "送信中...";
 
             try {
-                // スプレッドシートへ送信
                 const response = await fetch(GAS_URL, {
                     method: "POST",
-                    body: JSON.stringify({
-                        code: currentCode,
-                        name: name,
-                        qty: qty
-                    })
+                    body: JSON.stringify({ code: currentCode, name: name, qty: qty })
                 });
-                
                 const result = await response.json();
-                
                 if (result.status === "success") {
-                    // ローカルデータを更新
                     productMaster[currentCode] = name;
                     inventoryData[currentCode] = qty;
                     updateUIList();
-                    showToast("スプレッドシートを更新しました");
+                    showToast("更新が完了しました");
                     closeResult();
                 } else {
                     throw new Error(result.message);
                 }
             } catch (e) {
-                showToast("通信エラー: 保存できませんでした");
-                console.error(e);
+                showToast("通信エラー");
             } finally {
                 updateBtn.disabled = false;
                 updateBtn.innerText = "更新";
@@ -292,23 +314,20 @@
             inventoryList.innerHTML = "";
             const entries = Object.entries(inventoryData);
             listCount.innerText = `${entries.length}件`;
-
             if (entries.length === 0) {
-                inventoryList.innerHTML = '<li class="p-8 text-center text-gray-400 text-sm">登録された在庫はありません</li>';
+                inventoryList.innerHTML = '<li class="p-8 text-center text-gray-400 text-sm">在庫なし</li>';
                 return;
             }
-
-            // 在庫がある順に並び替え
             entries.sort((a, b) => b[1] - a[1]).forEach(([code, qty]) => {
-                const name = productMaster[code] || "不明な商品";
+                const name = productMaster[code] || "不明";
                 const li = document.createElement('li');
-                li.className = "p-4 flex justify-between items-center bg-white hover:bg-gray-50 transition-colors";
+                li.className = "p-4 flex justify-between items-center bg-white border-b border-gray-50";
                 li.innerHTML = `
                     <div class="flex-1 pr-4">
                         <p class="font-bold text-gray-800 truncate">${name}</p>
                         <p class="text-xs text-gray-400 font-mono">${code}</p>
                     </div>
-                    <div class="text-right whitespace-nowrap">
+                    <div class="text-right">
                         <span class="text-2xl font-black ${qty <= 5 ? 'text-red-500' : 'text-blue-600'}">${qty}</span>
                         <span class="text-xs font-bold text-gray-400 ml-1">個</span>
                     </div>
@@ -321,9 +340,7 @@
             const toast = document.getElementById('toast');
             document.getElementById('toast-message').innerText = msg;
             toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
         }
     </script>
 </body>
