@@ -10,9 +10,9 @@
         #interactive.viewport {
             position: relative;
             width: 100%;
-            height: 180px;
+            height: 300px;
             overflow: hidden;
-            border-radius: 0 0 1.5rem 1.5rem;
+            border-radius: 1rem;
             background: #000;
         }
         #interactive.viewport canvas, video {
@@ -45,7 +45,7 @@
             left: 50%;
             transform: translate(-50%, -50%);
             width: 80%;
-            height: 60px;
+            height: 120px;
             border: 2px solid #3b82f6; /* Blue 500 */
             border-radius: 8px;
             box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.3);
@@ -106,17 +106,6 @@
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
-    <!-- Camera Preview at the very top -->
-    <div id="interactive" class="viewport w-full max-w-md mx-auto flex items-center justify-center text-white">
-        <!-- ガイド枠とレーザー (スキャン中のみ表示を制御可能) -->
-        <div id="scanner-ui" class="hidden absolute inset-0 z-10">
-            <div class="scanner-guide">
-                <div class="scanner-laser"></div>
-            </div>
-        </div>
-        <p id="scanner-placeholder" class="z-20">カメラを起動してください</p>
-    </div>
-
     <div class="max-w-md mx-auto p-4">
         <!-- Header -->
         <header class="flex items-center justify-between mb-6">
@@ -127,8 +116,17 @@
             </div>
         </header>
 
-        <!-- Scanner Section Button -->
+        <!-- Scanner Section -->
         <div class="bg-white rounded-2xl shadow-sm p-4 mb-6 border border-gray-100">
+            <div id="interactive" class="viewport mb-4 flex items-center justify-center text-white">
+                <!-- ガイド枠とレーザー (スキャン中のみ表示を制御可能) -->
+                <div id="scanner-ui" class="hidden absolute inset-0 z-10">
+                    <div class="scanner-guide">
+                        <div class="scanner-laser"></div>
+                    </div>
+                </div>
+                <p id="scanner-placeholder" class="z-20">カメラを起動してください</p>
+            </div>
             <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
