@@ -271,6 +271,7 @@
 
         function startScanner() {
             Quagga.init({
+                numOfWorkers: navigator.hardwareConcurrency || 4,
                 inputStream: {
                     name: "Live",
                     type: "LiveStream",
@@ -316,13 +317,12 @@
             const code = data.codeResult.code;
             
             detectionBuffer.push(code);
-            if (detectionBuffer.length < 3) return;
-
-            const isConsistent = detectionBuffer.every(c => c === code);
-            if (!isConsistent) {
+            if (detectionBuffer.length > 5) {
                 detectionBuffer.shift();
-                return;
             }
+
+            const count = detectionBuffer.filter(c => c === code).length;
+            if (count < 3) return;
 
             detectionBuffer = [];
             if (currentCode === code) return; 
