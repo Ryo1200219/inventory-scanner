@@ -228,6 +228,12 @@
         document.getElementById('start-btn').addEventListener('click', toggleScanner);
         updateBtn.addEventListener('click', handleUpdate);
         searchInput.addEventListener('input', (e) => updateUIList(e.target.value));
+        inputName.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.blur();
+            }
+        });
 
         async function loadSpreadsheetData() {
             if (!GAS_URL || GAS_URL.includes("YOUR_GAS")) {
