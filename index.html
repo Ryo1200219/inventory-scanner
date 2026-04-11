@@ -400,15 +400,29 @@
             }
         }
 
+        // 曖昧検索（表記揺れ吸収）用関数
+        function normalizeString(str) {
+            if (!str) return '';
+            return str
+                .normalize('NFKC') // 全角英数→半角英数、半角カナ→全角カナ
+                .replace(/[\u3041-\u3096]/g, function(match) {
+                    // ひらがな→カタカナ変換
+                    return String.fromCharCode(match.charCodeAt(0) + 0x60);
+                })
+                .toLowerCase(); // 大文字→小文字
+        }
+
         function updateUIList(query = '') {
             inventoryList.innerHTML = "";
             let entries = Object.entries(inventoryData);
             
             if (query.trim()) {
-                const q = query.trim().toLowerCase();
+                const normalizedQuery = normalizeString(query.trim());
                 entries = entries.filter(([code, _]) => {
                     const name = productMaster[code] || "不明";
-                    return code.toLowerCase().includes(q) || name.toLowerCase().includes(q);
+                    const normalizedCode = normalizeString(code);
+                    const normalizedName = normalizeString(name);
+                    return normalizedCode.includes(normalizedQuery) || normalizedName.includes(normalizedQuery);
                 });
             }
             
