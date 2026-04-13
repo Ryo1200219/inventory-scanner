@@ -26,75 +26,6 @@
         .drawingBuffer {
             display: none;
         }
-        
-        /* スキャンエリアのオーバーレイ */
-        .scanner-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.4);
-            z-index: 5;
-        }
-
-        /* 横長のターゲットガイド枠 */
-        .scanner-guide {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 80%;
-            height: 120px;
-            border: 2px solid #3b82f6; /* Blue 500 */
-            border-radius: 8px;
-            box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.3);
-            z-index: 10;
-            pointer-events: none;
-        }
-
-        /* 枠の角の装飾 */
-        .scanner-guide::before, .scanner-guide::after {
-            content: "";
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border: 4px solid #fff;
-        }
-        /* Top Left */
-        .scanner-guide::before {
-            top: -4px;
-            left: -4px;
-            border-right: 0;
-            border-bottom: 0;
-            border-radius: 8px 0 0 0;
-        }
-        /* Bottom Right */
-        .scanner-guide::after {
-            bottom: -4px;
-            right: -4px;
-            border-left: 0;
-            border-top: 0;
-            border-radius: 0 0 8px 0;
-        }
-
-        /* スキャン線の演出 (ガイド枠内) */
-        .scanner-laser {
-            position: absolute;
-            top: 0;
-            left: 5%;
-            width: 90%;
-            height: 2px;
-            background: rgba(255, 0, 0, 0.7);
-            box-shadow: 0 0 12px rgba(255, 0, 0, 1);
-            z-index: 11;
-            animation: scan-line 2s infinite ease-in-out;
-        }
-        @keyframes scan-line {
-            0% { top: 10%; }
-            50% { top: 90%; }
-            100% { top: 10%; }
-        }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -119,12 +50,6 @@
         <!-- Scanner Section -->
         <div class="bg-white rounded-2xl shadow-sm p-4 mb-6 border border-gray-100">
             <div id="interactive" class="viewport mb-4 flex items-center justify-center text-white">
-                <!-- ガイド枠とレーザー (スキャン中のみ表示を制御可能) -->
-                <div id="scanner-ui" class="hidden absolute inset-0 z-10">
-                    <div class="scanner-guide">
-                        <div class="scanner-laser"></div>
-                    </div>
-                </div>
                 <p id="scanner-placeholder" class="z-20">カメラを起動してください</p>
             </div>
             <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
@@ -221,7 +146,6 @@
         const inventoryList = document.getElementById('inventory-list');
         const listCount = document.getElementById('list-count');
         const updateBtn = document.getElementById('update-btn');
-        const scannerUI = document.getElementById('scanner-ui');
         const searchInput = document.getElementById('search-input');
 
         window.onload = loadSpreadsheetData;
@@ -298,7 +222,6 @@
                 }
                 Quagga.start();
                 isScannerRunning = true;
-                scannerUI.classList.remove('hidden');
                 document.getElementById('start-btn').innerText = "カメラを停止";
                 document.getElementById('scanner-placeholder').style.display = 'none';
             });
@@ -309,7 +232,6 @@
         function stopScanner() {
             Quagga.stop();
             isScannerRunning = false;
-            scannerUI.classList.add('hidden');
             document.getElementById('start-btn').innerText = "スキャン開始";
         }
 
