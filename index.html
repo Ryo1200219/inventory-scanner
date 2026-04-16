@@ -197,12 +197,42 @@
         document.getElementById('start-btn').addEventListener('click', toggleScanner);
         updateBtn.addEventListener('click', handleUpdate);
         searchInput.addEventListener('input', (e) => updateUIList(e.target.value));
-        inputName.addEventListener('keypress', function (e) {
+        // 商品名入力欄：次は数量へ
+        inputName.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                this.blur();
+                e.stopPropagation(); // ★「共通設定」の方にイベントを伝えない（邪魔させない）
+                inputQty.focus();
+                inputQty.select(); // 次の数量をすぐ上書きできるように全選択
             }
         });
+
+        // 数量入力欄：確定して閉じる
+        inputQty.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // 保存処理があればここで呼ぶ（例: handleUpdate();）
+                this.blur(); // キーボードを閉じる
+            }
+        });
+
+        // アプリ内のすべての input 要素に対して設定
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    // もし「次に移動すべき項目」が設定されていなければ、キーボードを閉じる
+                    // (次に移動させる場合は、個別のEventListenerでpreventDefaultしてfocusを移す)
+
+                    // 0.1秒後に実行（処理の衝突を避けるため）
+                    setTimeout(() => {
+                        if (document.activeElement === input) {
+                            input.blur();
+                        }
+                    }, 100);
+                }
+            });
+        });
+
 
         async function loadSpreadsheetData() {
             if (!GAS_URL || GAS_URL.includes("YOUR_GAS")) {
@@ -357,8 +387,9 @@
             setTimeout(() => {
                 if (targetInput) {
                     targetInput.focus();
-                    // iPhoneなどのために、入力内容を選択状態にするとさらに親切です
-                    if (targetInput.select) targetInput.select();
+                    if (typeof targetInput.select === 'function') {
+                        targetInput.select();
+                    }
                 }
             }, 300);
         }
