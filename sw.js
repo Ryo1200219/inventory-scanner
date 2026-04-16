@@ -1,4 +1,5 @@
-const CACHE_NAME = 'by-zaiko-v1.1.12'; // ★バージョンを上げる
+importScripts('version.js');//version入力はversion.jsで行う
+
 const ASSETS_TO_CACHE = [
   './',                  // ルートもキャッシュに含めると安定します
   './index.html',

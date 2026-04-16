@@ -54,8 +54,8 @@
     <div class="max-w-md mx-auto p-4">
         <!-- Header -->
         <header class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">在庫管理スキャナー <span
-                    class="text-sm font-normal text-gray-400">v1.1.11</span></h1>
+            <h1 class="text-2xl font-bold text-gray-800">在庫管理スキャナー <span id="version"
+                    class="text-sm font-normal text-gray-400"></span></h1>
             <div id="status-indicator" class="flex items-center text-sm text-gray-400">
                 <span id="status-dot" class="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
                 <span id="status-text">オフライン</span>
@@ -156,8 +156,23 @@
     </div>
 
     <script>
-        // デプロイしたGASのURL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec";
+        // version.jsを「キャッシュを無視して」強制的に最新で読み込む
+        const script = document.createElement('script');
+        // 現在時刻をハッシュとして付けることで、ブラウザに「新しいファイルだ」と思わせる
+        script.src = 'version.js?update=' + new Date().getTime();
+        document.head.appendChild(script);
+
+        // version.jsの読み込みが完了した瞬間に実行される
+        script.onload = () => {
+            // 画面のバージョン表示を更新
+            const versionElement = document.getElementById('version');
+            if (versionElement) versionElement.innerText = APP_VERSION;
+
+            console.log("アプリ起動:", APP_VERSION);
+        };
+    </script>
+
+    <script>
 
         let productMaster = {};
         let inventoryData = {};
