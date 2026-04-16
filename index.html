@@ -114,7 +114,7 @@
                 <div class="flex-1">
                     <label class="block text-xs font-bold text-gray-400 mb-1">数量変更 (キーボード入力)</label>
                     <div class="flex items-center gap-3">
-                        <input type="number" id="input-qty" value="0" min="0"
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" id="input-qty" value="0" min="0"
                             class="w-full text-center text-2xl font-bold border-2 border-gray-200 rounded-xl py-2 outline-none focus:border-blue-400 transition-colors">
                     </div>
                 </div>
@@ -197,70 +197,40 @@
         document.getElementById('start-btn').addEventListener('click', toggleScanner);
         updateBtn.addEventListener('click', handleUpdate);
         searchInput.addEventListener('input', (e) => updateUIList(e.target.value));
-        // 商品名入力欄：次は数量へ
-        // inputName.addEventListener('keydown', function (e) {
-        //     if (e.key === 'Enter') {
-        //         e.preventDefault();
-        //         e.stopPropagation();
 
-        //         // 0.01秒（10ミリ秒）だけ処理を遅らせる
-        //         // これだけで、ブラウザの標準挙動との衝突を回避できます
-        //         setTimeout(() => {
-        //             inputQty.focus();
-        //             if (typeof inputQty.select === 'function') {
-        //                 inputQty.select();
-        //             }
-        //             // モバイル端末向けに全選択をより確実にするおまじない
-        //             inputQty.setSelectionRange(0, 9999);
-        //         }, 10);
-        //     }
-        // });
-
-        // これをイベントリスナーのセクションに追加
+        // --- 数量入力欄：自分にフォーカスが来たら何が何でも全選択する ---
         inputQty.addEventListener('focus', function () {
+            // 0.1秒待つのがコツ（ブラウザのフォーカス処理とぶつからないようにする）
             setTimeout(() => {
-                this.setSelectionRange(0, 9999);
                 this.select();
-            }, 10);
+                if (typeof this.setSelectionRange === 'function') {
+                    this.setSelectionRange(0, 9999);
+                }
+            }, 100);
         });
 
-
-        // 商品名入力欄：次は数量へ
+        // --- 商品名入力欄：Enterで数量へ移動（全選択は上のfocusリスナーが担当する） ---
         inputName.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
-
-                // 1. まずは数量入力欄にフォーカスを当てる
                 inputQty.focus();
-
-                // 2. その直後（50ms後）に選択命令を送る
-                setTimeout(() => {
-                    // iOS/Androidの両方で確実に選択させる「最強のセット」
-                    inputQty.setSelectionRange(0, 9999);
-                    inputQty.select();
-                }, 50); // 10msよりも少し長めに設定して、ブラウザの処理を待ちます
             }
         });
 
-
-        // 数量入力欄：確定して閉じる
+        // --- 数量入力欄：Enterで確定（キーボードを閉じる） ---
         inputQty.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                // 保存処理があればここで呼ぶ（例: handleUpdate();）
-                this.blur(); // キーボードを閉じる
+                // 保存処理があればここで呼ぶ
+                this.blur();
             }
         });
 
-        // アプリ内のすべての input 要素に対して設定
+        // --- 共通設定：次に移動する設定がない入力欄でEnterを押したら閉じる ---
         document.querySelectorAll('input').forEach(input => {
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    // もし「次に移動すべき項目」が設定されていなければ、キーボードを閉じる
-                    // (次に移動させる場合は、個別のEventListenerでpreventDefaultしてfocusを移す)
-
-                    // 0.1秒後に実行（処理の衝突を避けるため）
                     setTimeout(() => {
                         if (document.activeElement === input) {
                             input.blur();
@@ -269,6 +239,8 @@
                 }
             });
         });
+
+
 
 
         async function loadSpreadsheetData() {
