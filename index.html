@@ -201,9 +201,18 @@
         inputName.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                e.stopPropagation(); // ★「共通設定」の方にイベントを伝えない（邪魔させない）
-                inputQty.focus();
-                inputQty.select(); // 次の数量をすぐ上書きできるように全選択
+                e.stopPropagation();
+
+                // 0.01秒（10ミリ秒）だけ処理を遅らせる
+                // これだけで、ブラウザの標準挙動との衝突を回避できます
+                setTimeout(() => {
+                    inputQty.focus();
+                    if (typeof inputQty.select === 'function') {
+                        inputQty.select();
+                    }
+                    // モバイル端末向けに全選択をより確実にするおまじない
+                    inputQty.setSelectionRange(0, 9999);
+                }, 10);
             }
         });
 
