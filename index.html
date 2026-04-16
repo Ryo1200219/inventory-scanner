@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -15,7 +16,9 @@
             border-radius: 1rem;
             background: #000;
         }
-        #interactive.viewport canvas, video {
+
+        #interactive.viewport canvas,
+        video {
             position: absolute;
             top: 0;
             left: 0;
@@ -24,24 +27,35 @@
             object-fit: cover;
             z-index: 1;
         }
+
         #interactive.viewport canvas.drawingBuffer {
             z-index: 2;
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
+
         .scale-in-center {
             animation: fadeIn 0.3s ease-out forwards;
         }
     </style>
 </head>
+
 <body class="bg-gray-50 min-h-screen font-sans">
     <div class="max-w-md mx-auto p-4">
         <!-- Header -->
         <header class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">在庫管理スキャナー <span class="text-sm font-normal text-gray-400">v1.1.11</span></h1>
+            <h1 class="text-2xl font-bold text-gray-800">在庫管理スキャナー <span
+                    class="text-sm font-normal text-gray-400">v1.1.11</span></h1>
             <div id="status-indicator" class="flex items-center text-sm text-gray-400">
                 <span id="status-dot" class="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
                 <span id="status-text">オフライン</span>
@@ -53,20 +67,26 @@
             <div id="interactive" class="viewport mb-4 flex items-center justify-center text-white">
                 <p id="scanner-placeholder" class="z-20">カメラを起動してください</p>
             </div>
-            <button id="start-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            <button id="start-btn"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 スキャン開始
             </button>
         </div>
 
         <!-- Modal Backdrop -->
-        <div id="modal-backdrop" class="hidden fixed inset-0 bg-black/60 z-40 transition-opacity backdrop-blur-sm" onclick="closeResult()"></div>
+        <div id="modal-backdrop" class="hidden fixed inset-0 bg-black/60 z-40 transition-opacity backdrop-blur-sm"
+            onclick="closeResult()"></div>
 
         <!-- Result / Input Section (Half Modal) -->
-        <div id="result-card" class="fixed bottom-0 inset-x-0 z-50 transform translate-y-full transition-transform duration-300 ease-out bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] p-6 pb-8 max-h-[85vh] overflow-y-auto w-full max-w-md mx-auto">
+        <div id="result-card"
+            class="fixed bottom-0 inset-x-0 z-50 transform translate-y-full transition-transform duration-300 ease-out bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] p-6 pb-8 max-h-[85vh] overflow-y-auto w-full max-w-md mx-auto">
             <!-- Modal Handle for swiping down visual cue -->
             <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6"></div>
             <div class="flex justify-between items-start mb-4">
@@ -76,25 +96,30 @@
                     <p id="display-code" class="text-sm text-gray-400 font-mono"></p>
                 </div>
                 <button onclick="closeResult()" class="text-gray-400 hover:text-gray-600 p-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
 
             <div id="new-item-form" class="hidden mb-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
                 <label class="block text-sm font-bold text-blue-700 mb-1">新しく商品名を登録：</label>
-                <input type="text" id="input-name" placeholder="例: お茶 500ml" class="w-full p-3 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-400 outline-none">
+                <input type="text" id="input-name" placeholder="例: お茶 500ml"
+                    class="w-full p-3 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-400 outline-none">
             </div>
 
             <div class="flex items-center gap-4">
                 <div class="flex-1">
                     <label class="block text-xs font-bold text-gray-400 mb-1">数量変更 (キーボード入力)</label>
                     <div class="flex items-center gap-3">
-                        <input type="number" id="input-qty" value="0" min="0" class="w-full text-center text-2xl font-bold border-2 border-gray-200 rounded-xl py-2 outline-none focus:border-blue-400 transition-colors">
+                        <input type="number" id="input-qty" value="0" min="0"
+                            class="w-full text-center text-2xl font-bold border-2 border-gray-200 rounded-xl py-2 outline-none focus:border-blue-400 transition-colors">
                     </div>
                 </div>
-                <button id="update-btn" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50">更新</button>
+                <button id="update-btn"
+                    class="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50">更新</button>
             </div>
         </div>
 
@@ -103,14 +128,19 @@
             <div class="p-4 border-b border-gray-50 flex flex-col gap-3 bg-gray-50/50">
                 <div class="flex justify-between items-center">
                     <h3 class="font-bold text-gray-700">在庫一覧</h3>
-                    <span id="list-count" class="text-xs font-bold bg-gray-200 text-gray-600 px-2 py-1 rounded-full">0件</span>
+                    <span id="list-count"
+                        class="text-xs font-bold bg-gray-200 text-gray-600 px-2 py-1 rounded-full">0件</span>
                 </div>
                 <!-- Search Bar -->
                 <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
                     </div>
-                    <input type="text" id="search-input" placeholder="商品名・JANコードで検索..." class="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                    <input type="text" id="search-input" placeholder="商品名・JANコードで検索..."
+                        class="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
                 </div>
             </div>
             <ul id="inventory-list" class="divide-y divide-gray-50 max-h-[40vh] overflow-y-auto pb-20">
@@ -120,19 +150,20 @@
     </div>
 
     <!-- Notification Toast -->
-    <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 translate-y-20 opacity-0 bg-gray-900/90 backdrop-blur text-white px-6 py-3 rounded-full transition-all duration-300 shadow-xl flex items-center gap-2 z-50">
+    <div id="toast"
+        class="fixed bottom-6 left-1/2 transform -translate-x-1/2 translate-y-20 opacity-0 bg-gray-900/90 backdrop-blur text-white px-6 py-3 rounded-full transition-all duration-300 shadow-xl flex items-center gap-2 z-50">
         <span id="toast-message"></span>
     </div>
 
     <script>
         // デプロイしたGASのURL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec"; 
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbxE2WUH8SuUtiCf_Mkpa2rE4FNXdvR1vFc_q0VkCfTNx3jqG75aTPDPbHR21X9xMIFncA/exec";
 
-        let productMaster = {}; 
-        let inventoryData = {}; 
+        let productMaster = {};
+        let inventoryData = {};
         let currentCode = null;
         let isScannerRunning = false;
-        
+
         let detectionBuffer = [];
 
         const resultCard = document.getElementById('result-card');
@@ -151,7 +182,7 @@
         document.getElementById('start-btn').addEventListener('click', toggleScanner);
         updateBtn.addEventListener('click', handleUpdate);
         searchInput.addEventListener('input', (e) => updateUIList(e.target.value));
-        inputName.addEventListener('keypress', function(e) {
+        inputName.addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 this.blur();
@@ -214,7 +245,7 @@
                     readers: ["ean_reader"],
                     multiple: false
                 }
-            }, function(err) {
+            }, function (err) {
                 if (err) {
                     showToast("カメラを起動できません");
                     return;
@@ -239,16 +270,16 @@
                     result.boxes.filter(function (box) {
                         return box !== result.box;
                     }).forEach(function (box) {
-                        Quagga.ImageDebug.drawPath(box, {x: 0, y: 1}, drawingCtx, {color: "green", lineWidth: 2});
+                        Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx, { color: "green", lineWidth: 2 });
                     });
                 }
 
                 if (result.box) {
-                    Quagga.ImageDebug.drawPath(result.box, {x: 0, y: 1}, drawingCtx, {color: "#00F", lineWidth: 2});
+                    Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx, { color: "#00F", lineWidth: 2 });
                 }
 
                 if (result.codeResult && result.codeResult.code) {
-                    Quagga.ImageDebug.drawPath(result.line, {x: 'x', y: 'y'}, drawingCtx, {color: 'red', lineWidth: 3});
+                    Quagga.ImageDebug.drawPath(result.line, { x: 'x', y: 'y' }, drawingCtx, { color: 'red', lineWidth: 3 });
                 }
             }
         }
@@ -261,7 +292,7 @@
 
         function onDetected(data) {
             const code = data.codeResult.code;
-            
+
             detectionBuffer.push(code);
             if (detectionBuffer.length > 5) {
                 detectionBuffer.shift();
@@ -271,35 +302,52 @@
             if (count < 3) return;
 
             detectionBuffer = [];
-            if (currentCode === code) return; 
-            
+            if (currentCode === code) return;
+
             stopScanner();
             document.getElementById('start-btn').innerText = "スキャン再開";
             if (window.navigator.vibrate) window.navigator.vibrate(50);
-            
+
             openManualUpdate(code);
         }
 
         function openManualUpdate(code) {
             currentCode = code;
             displayCode.innerText = `JAN: ${code}`;
-            
+
+            // 【ポイント】ここであらかじめ「空の入れ物」を作っておく
+            let targetInput = null;
+
             if (productMaster[code]) {
                 displayName.innerText = productMaster[code];
                 newItemForm.classList.add('hidden');
                 inputQty.value = inventoryData[code] || 0;
+
+                // 登録済みなら数量
+                targetInput = inputQty;
             } else {
                 displayName.innerText = "未登録の商品";
                 newItemForm.classList.remove('hidden');
                 inputName.value = "";
                 inputQty.value = 1;
+
+                // 未登録なら商品名
+                targetInput = inputName;
             }
 
             modalBackdrop.classList.remove('hidden');
             resultCard.classList.remove('translate-y-full');
-            // モーダルが開いた後、数量入力欄にフォーカスを当てる
-            setTimeout(() => inputQty.focus(), 300);
+
+            // 0.3秒後に、決まった方の入力欄にフォーカス！
+            setTimeout(() => {
+                if (targetInput) {
+                    targetInput.focus();
+                    // iPhoneなどのために、入力内容を選択状態にするとさらに親切です
+                    if (targetInput.select) targetInput.select();
+                }
+            }, 300);
         }
+
 
         function closeResult() {
             modalBackdrop.classList.add('hidden');
@@ -348,7 +396,7 @@
             if (!str) return '';
             return str
                 .normalize('NFKC') // 全角英数→半角英数、半角カナ→全角カナ
-                .replace(/[\u3041-\u3096]/g, function(match) {
+                .replace(/[\u3041-\u3096]/g, function (match) {
                     // ひらがな→カタカナ変換
                     return String.fromCharCode(match.charCodeAt(0) + 0x60);
                 })
@@ -358,7 +406,7 @@
         function updateUIList(query = '') {
             inventoryList.innerHTML = "";
             let entries = Object.entries(inventoryData);
-            
+
             if (query.trim()) {
                 const normalizedQuery = normalizeString(query.trim());
                 entries = entries.filter(([code, _]) => {
@@ -368,7 +416,7 @@
                     return normalizedCode.includes(normalizedQuery) || normalizedName.includes(normalizedQuery);
                 });
             }
-            
+
             listCount.innerText = `${entries.length}件`;
             if (entries.length === 0) {
                 inventoryList.innerHTML = '<li class="p-8 text-center text-gray-400 text-sm">該当なし</li>';
@@ -401,4 +449,5 @@
         }
     </script>
 </body>
+
 </html>
