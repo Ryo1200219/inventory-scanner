@@ -216,6 +216,15 @@
         //     }
         // });
 
+        // これをイベントリスナーのセクションに追加
+        inputQty.addEventListener('focus', function () {
+            setTimeout(() => {
+                this.setSelectionRange(0, 9999);
+                this.select();
+            }, 10);
+        });
+
+
         // 商品名入力欄：次は数量へ
         inputName.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
