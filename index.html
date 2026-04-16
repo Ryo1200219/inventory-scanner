@@ -198,23 +198,42 @@
         updateBtn.addEventListener('click', handleUpdate);
         searchInput.addEventListener('input', (e) => updateUIList(e.target.value));
         // 商品名入力欄：次は数量へ
+        // inputName.addEventListener('keydown', function (e) {
+        //     if (e.key === 'Enter') {
+        //         e.preventDefault();
+        //         e.stopPropagation();
+
+        //         // 0.01秒（10ミリ秒）だけ処理を遅らせる
+        //         // これだけで、ブラウザの標準挙動との衝突を回避できます
+        //         setTimeout(() => {
+        //             inputQty.focus();
+        //             if (typeof inputQty.select === 'function') {
+        //                 inputQty.select();
+        //             }
+        //             // モバイル端末向けに全選択をより確実にするおまじない
+        //             inputQty.setSelectionRange(0, 9999);
+        //         }, 10);
+        //     }
+        // });
+
+        // 商品名入力欄：次は数量へ
         inputName.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
 
-                // 0.01秒（10ミリ秒）だけ処理を遅らせる
-                // これだけで、ブラウザの標準挙動との衝突を回避できます
+                // 1. まずは数量入力欄にフォーカスを当てる
+                inputQty.focus();
+
+                // 2. その直後（50ms後）に選択命令を送る
                 setTimeout(() => {
-                    inputQty.focus();
-                    if (typeof inputQty.select === 'function') {
-                        inputQty.select();
-                    }
-                    // モバイル端末向けに全選択をより確実にするおまじない
+                    // iOS/Androidの両方で確実に選択させる「最強のセット」
                     inputQty.setSelectionRange(0, 9999);
-                }, 10);
+                    inputQty.select();
+                }, 50); // 10msよりも少し長めに設定して、ブラウザの処理を待ちます
             }
         });
+
 
         // 数量入力欄：確定して閉じる
         inputQty.addEventListener('keydown', function (e) {
