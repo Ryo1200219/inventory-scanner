@@ -380,73 +380,43 @@
             openManualUpdate(code);
         }
 
-        // function openManualUpdate(code) {
-        //     currentCode = code;
-        //     displayCode.innerText = `JAN: ${code}`;
-
-        //     // 【ポイント】ここであらかじめ「空の入れ物」を作っておく
-        //     let targetInput = null;
-
-        //     if (productMaster[code]) {
-        //         displayName.innerText = productMaster[code];
-        //         newItemForm.classList.add('hidden');
-        //         inputQty.value = inventoryData[code] || 0;
-
-        //         // 登録済みなら数量
-        //         targetInput = inputQty;
-        //     } else {
-        //         displayName.innerText = "未登録の商品";
-        //         newItemForm.classList.remove('hidden');
-        //         inputName.value = "";
-        //         inputQty.value = "";
-
-        //         // 未登録なら商品名
-        //         targetInput = inputName;
-        //     }
-
-        //     modalBackdrop.classList.remove('hidden');
-        //     resultCard.classList.remove('translate-y-full');
-
-        //     // 0.3秒後に、決まった方の入力欄にフォーカス！
-        //     setTimeout(() => {
-        //         if (targetInput) {
-        //             targetInput.focus();
-        //             if (typeof targetInput.select === 'function') {
-        //                 targetInput.select();
-        //             }
-        //         }
-        //     }, 300);
-        // }
-        function openManualUpdate(code, isKeyboardOpen = false) { // 引数を追加
+        function openManualUpdate(code) {
             currentCode = code;
             displayCode.innerText = `JAN: ${code}`;
 
-            let targetInput = productMaster[code] ? inputQty : inputName;
+            // 【ポイント】ここであらかじめ「空の入れ物」を作っておく
+            let targetInput = null;
 
             if (productMaster[code]) {
                 displayName.innerText = productMaster[code];
                 newItemForm.classList.add('hidden');
                 inputQty.value = inventoryData[code] || 0;
+
+                // 登録済みなら数量
+                targetInput = inputQty;
             } else {
                 displayName.innerText = "未登録の商品";
                 newItemForm.classList.remove('hidden');
                 inputName.value = "";
+                inputQty.value = "";
+
+                // 未登録なら商品名
+                targetInput = inputName;
             }
 
             modalBackdrop.classList.remove('hidden');
             resultCard.classList.remove('translate-y-full');
 
-            // 判定に基づいてタイマーを切り替える
-            const delay = isKeyboardOpen ? 0 : 400;
-
+            // 0.3秒後に、決まった方の入力欄にフォーカス！
             setTimeout(() => {
                 if (targetInput) {
                     targetInput.focus();
-                    if (targetInput.select) targetInput.select();
+                    if (typeof targetInput.select === 'function') {
+                        targetInput.select();
+                    }
                 }
-            }, delay);
+            }, 300);
         }
-
 
 
         function closeResult() {
@@ -526,21 +496,8 @@
                 const name = productMaster[code] || "不明";
                 const li = document.createElement('li');
                 li.className = "p-4 flex justify-between items-center bg-white border-b border-gray-50 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors";
-
-                // li.onpointerdown = (e) => e.preventDefault();
-                // li.onclick = () => openManualUpdate(code);
-                li.onpointerdown = (e) => {
-                    // タップされた瞬間に「今、検索窓にフォーカスがあるか」を判定
-                    const isSearchFocused = (document.activeElement.id === 'search-input');
-
-                    // フォーカスが外れてキーボードが閉じるのを防ぐ
-                    e.preventDefault();
-
-                    // 判定結果を引数として渡す
-                    openManualUpdate(code, isSearchFocused);
-                };
-                li.onclick = null; // onclickではなくpointerdown側で制御するため
-
+                li.onpointerdown = (e) => e.preventDefault();
+                li.onclick = () => openManualUpdate(code);
                 li.innerHTML = `
                     <div class="flex-1 min-w-0 pr-4 pointer-events-none">
                         <p class="text-sm font-bold text-gray-800 truncate">${name}</p>
