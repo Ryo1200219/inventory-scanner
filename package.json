@@ -1,0 +1,22 @@
+{
+  "name": "inventory-scanner",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.js",
+  "scripts": {
+    "release": "node release.js",
+    "releaseの使い方": "npm run release minor"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ryo1200219/inventory-scanner.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Ryo1200219/inventory-scanner/issues"
+  },
+  "homepage": "https://github.com/Ryo1200219/inventory-scanner#readme"
+}
