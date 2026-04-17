@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>在庫管理スキャナー Pro</title>
+    <title>BY在庫管理スキャナー</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
     <style>
@@ -54,11 +54,11 @@
     <div class="max-w-md mx-auto p-4">
         <!-- Header -->
         <header class="flex items-center justify-between mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">在庫管理スキャナー <span id="version"
-                    class="text-sm font-normal text-gray-400"></span></h1>
+            <h1 class="text-lg font-bold text-gray-800">BY在管スキャナー <span id="version"
+                    class="text-xs font-normal text-gray-400"></span></h1>
             <div id="status-indicator" class="flex items-center text-sm text-gray-400">
                 <span id="status-dot" class="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
-                <span id="status-text">オフライン</span>
+                <span id="status-text" class="text-xs">オフライン</span>
             </div>
         </header>
 
@@ -266,7 +266,7 @@
             const text = document.getElementById('status-text');
             dot.className = `w-2 h-2 ${isOnline ? 'bg-green-500' : 'bg-red-500'} rounded-full mr-2`;
             text.innerText = isOnline ? "同期済み" : "接続エラー";
-            text.className = isOnline ? "text-green-600" : "text-red-600";
+            text.className = isOnline ? "text-xs text-green-600" : "text-xs text-red-600";
         }
 
         function toggleScanner() {
@@ -483,12 +483,12 @@
                 li.className = "p-4 flex justify-between items-center bg-white border-b border-gray-50 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors";
                 li.onclick = () => openManualUpdate(code);
                 li.innerHTML = `
-                    <div class="flex-1 pr-4 pointer-events-none">
-                        <p class="font-bold text-gray-800 truncate">${name}</p>
+                    <div class="flex-1 min-w-0 pr-4 pointer-events-none">
+                        <p class="text-sm font-bold text-gray-800 truncate">${name}</p>
                         <p class="text-xs text-gray-400 font-mono">${code}</p>
                     </div>
-                    <div class="text-right pointer-events-none">
-                        <span class="text-2xl font-black ${qty <= 5 ? 'text-red-500' : 'text-blue-600'}">${qty}</span>
+                    <div class="text-right pointer-events-none shrink-0">
+                        <span class="text-2xl font-black ${qty === 0 ? 'text-red-500' : 'text-blue-600'}">${qty}</span>
                         <span class="text-xs font-bold text-gray-400 ml-1">個</span>
                     </div>
                 `;
