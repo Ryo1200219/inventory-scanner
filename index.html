@@ -496,6 +496,7 @@
                 const name = productMaster[code] || "不明";
                 const li = document.createElement('li');
                 li.className = "p-4 flex justify-between items-center bg-white border-b border-gray-50 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors";
+                li.onpointerdown = (e) => e.preventDefault();
                 li.onclick = () => openManualUpdate(code);
                 li.innerHTML = `
                     <div class="flex-1 min-w-0 pr-4 pointer-events-none">
