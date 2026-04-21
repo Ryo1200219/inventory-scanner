@@ -441,9 +441,16 @@
             try {
                 const response = await fetch(GAS_URL, {
                     method: "POST",
-                    body: JSON.stringify({ code: currentCode, name: name, qty: qty })
+                    body: JSON.stringify({ code: currentCode, name: name, qty: qty }),
+                    keepalive: true // これで送信の完遂を助ける
                 });
+
+                // 画面を閉じた瞬間にここが走るとエラーになる可能性があるため
+                // まずは「送信が成功したか」だけを基準にするのが安全です
+                if (!response.ok) throw new Error("HTTP error");
+
                 const result = await response.json();
+
                 if (result.status === "success") {
                     productMaster[currentCode] = name;
                     inventoryData[currentCode] = qty;
@@ -454,7 +461,9 @@
                     throw new Error(result.message);
                 }
             } catch (e) {
-                showToast("通信エラー");
+                // 画面復帰時にエラーが出ていても、実は送信できている場合が多いです
+                showToast("通信エラー（送信状況を確認してください）");
+                console.error(e);
             } finally {
                 updateBtn.disabled = false;
                 updateBtn.innerText = "更新";
