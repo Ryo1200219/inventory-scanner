@@ -3,30 +3,27 @@
 
 <head>
     <meta charset="UTF-8">
-    <!-- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"> -->
     <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
-
-    <title>BY在庫管理スキャナー</title>
+    <title>BY在庫スキャナー</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@ericblade/quagga2/dist/quagga.min.js"></script>
     <style>
-        /* 指定したIDの入力欄で、検索窓特有の「×」ボタンを消す */
-        #input-name::-webkit-search-cancel-button,
-        #input-name::-webkit-search-decoration,
-        #input-qty::-webkit-search-cancel-button,
-        #input-qty::-webkit-search-decoration,
-        #search-input::-webkit-search-cancel-button,
-        #search-input::-webkit-search-decoration {
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* 検索窓の×ボタン消去 */
+        input::-webkit-search-cancel-button,
+        input::-webkit-search-decoration {
             -webkit-appearance: none;
             display: none;
         }
 
+        /* Quagga用ビューポート */
         #interactive.viewport {
             position: relative;
             width: 100%;
-            height: 300px;
-            overflow: hidden;
-            border-radius: 1rem;
+            height: 100%;
             background: #000;
         }
 
@@ -38,240 +35,218 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            z-index: 1;
         }
 
-        #interactive.viewport canvas.drawingBuffer {
-            z-index: 2;
+        .tab-content {
+            display: none;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
         }
 
-        .scale-in-center {
-            animation: fadeIn 0.3s ease-out forwards;
+        /* iPhone風ハーフモーダルアニメーション */
+        #result-modal.hidden {
+            display: none;
+        }
+
+        #modal-content {
+            transition: transform 0.3s ease-out;
+        }
+
+        #modal-content.translate-y-full {
+            transform: translateY(100%);
         }
     </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen font-sans">
-    <div class="max-w-md mx-auto p-4">
-        <!-- Header -->
-        <header class="flex items-center justify-between mb-6">
-            <h1 class="text-lg font-bold text-gray-800">BY在管スキャナー <span id="version"
-                    class="text-xs font-normal text-gray-400"></span></h1>
-            <div id="status-indicator" class="flex items-center text-sm text-gray-400">
-                <span id="status-dot" class="w-2 h-2 bg-gray-400 rounded-full mr-2"></span>
-                <span id="status-text" class="text-xs">オフライン</span>
-            </div>
-        </header>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden select-none">
 
-        <!-- Scanner Section -->
-        <div class="bg-white rounded-2xl shadow-sm p-4 mb-6 border border-gray-100">
-            <div id="interactive" class="viewport mb-4 flex items-center justify-center text-white">
-                <p id="scanner-placeholder" class="z-20">カメラを起動してください</p>
-            </div>
-            <button id="start-btn"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                スキャン開始
-            </button>
+    <header class="bg-white px-4 py-3 flex justify-between items-center border-b border-gray-200 shrink-0 z-10">
+        <div class="flex items-baseline gap-2">
+            <h1 class="text-lg font-bold text-gray-900">BY在庫スキャナー</h1>
+            <span id="version" class="text-[10px] text-gray-400 font-mono"></span>
         </div>
+        <div id="status-indicator" class="flex items-center gap-1.5 text-xs font-medium transition-colors">
+            <span id="status-dot" class="w-2 h-2 rounded-full bg-gray-300"></span>
+            <span id="status-text">読み込み中...</span>
+        </div>
+    </header>
 
-        <!-- Modal Backdrop -->
-        <div id="modal-backdrop" class="hidden fixed inset-0 bg-black/60 z-40 transition-opacity backdrop-blur-sm"
-            onclick="closeResult()"></div>
+    <main class="flex-1 relative overflow-hidden">
 
-        <!-- Result / Input Section (Half Modal) -->
-        <div id="result-card"
-            class="fixed bottom-0 inset-x-0 z-50 transform translate-y-full transition-transform duration-300 ease-out bg-white rounded-t-3xl shadow-[0_-8px_30px_rgba(0,0,0,0.12)] p-6 pb-8 max-h-[85vh] overflow-y-auto w-full max-w-md mx-auto">
-            <!-- Modal Handle for swiping down visual cue -->
-            <div class="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-6"></div>
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">読み取り完了</p>
-                    <h2 id="display-name" class="text-xl font-black text-gray-900">読み取り中...</h2>
-                    <p id="display-code" class="text-sm text-gray-400 font-mono"></p>
+        <section id="tab-scan" class="tab-content active h-full bg-gray-900">
+            <div id="interactive" class="viewport flex-1 relative">
+                <div id="scanner-placeholder"
+                    class="absolute inset-0 flex items-center justify-center text-white/50 text-sm">
+                    カメラを起動してください
                 </div>
-                <button onclick="closeResult()" class="text-gray-400 hover:text-gray-600 p-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
+            </div>
+            <div class="p-6 bg-gray-100 shrink-0">
+                <button id="start-btn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
+                            d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                        </path>
                     </svg>
+                    スキャン開始
                 </button>
             </div>
+        </section>
 
-            <div id="new-item-form" class="hidden mb-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                <label class="block text-sm font-bold text-blue-700 mb-1">新しく商品名を登録：</label>
-                <input type="search" inputmode="text" id="input-name" autocomplete="off" autocorrect="off"
-                    autocapitalize="off" spellcheck="false" placeholder="例: キッチンペーパー150枚"
-                    class="w-full p-3 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-400 outline-none">
+        <section id="tab-search" class="tab-content h-full bg-white">
+            <div class="px-4 py-3 flex justify-between items-center bg-gray-50/50 border-b border-gray-100">
+                <h2 class="font-bold text-gray-800">BY在庫一覧</h2>
+                <span id="list-count"
+                    class="bg-gray-200 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold">0件</span>
             </div>
 
-            <div class="flex items-center gap-4">
-                <div class="flex-1">
-                    <label class="block text-xs font-bold text-gray-400 mb-1">数量変更</label>
-                    <div class="flex items-center gap-3">
-                        <input type="search" inputmode="numeric" pattern="[0-9]*" id="input-qty" value="0" min="0"
-                            class="w-full text-center text-2xl font-bold border-2 border-gray-200 rounded-xl py-2 outline-none focus:border-blue-400 transition-colors">
-                    </div>
-                </div>
-                <button id="update-btn"
-                    class="bg-blue-600 text-white font-bold py-3 px-8 rounded-xl shadow-md hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50">更新</button>
-            </div>
-        </div>
+            <ul id="inventory-list" class="flex-1 overflow-y-auto divide-y divide-gray-50 pb-24">
+                <li class="p-8 text-center text-gray-400 text-sm">データを同期しています...</li>
+            </ul>
 
-        <!-- Inventory List -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-4 border-b border-gray-50 flex flex-col gap-3 bg-gray-50/50">
-                <div class="flex justify-between items-center">
-                    <h3 class="font-bold text-gray-700">在庫一覧</h3>
-                    <span id="list-count"
-                        class="text-xs font-bold bg-gray-200 text-gray-600 px-2 py-1 rounded-full">0件</span>
-                </div>
-                <!-- Search Bar -->
-                <div class="relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="absolute bottom-6 left-0 right-0 px-4 pointer-events-none">
+                <div class="relative max-w-md mx-auto pointer-events-auto">
+                    <span class="absolute inset-y-0 left-4 flex items-center text-gray-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                         </svg>
-                    </div>
-                    <input type="search" inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="off"
-                        spellcheck="false" id="search-input" placeholder="商品名・JANコードで検索..."
-                        class="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-shadow">
+                    </span>
+                    <input type="search" id="search-input" placeholder="商品名・JANコードで検索..."
+                        class="w-full pl-11 pr-4 py-3.5 bg-white border border-gray-200 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] focus:outline-none focus:ring-2 focus:ring-blue-500 text-[15px]">
                 </div>
             </div>
-            <ul id="inventory-list" class="divide-y divide-gray-50 max-h-[40vh] overflow-y-auto pb-20">
-                <li class="p-8 text-center text-gray-400 text-sm">データを読み込み中...</li>
-            </ul>
+        </section>
+
+    </main>
+
+    <nav class="bg-white border-t border-gray-200 shrink-0 pb-safe">
+        <div class="flex justify-around items-center h-20">
+            <button onclick="switchTab('scan')" id="nav-scan"
+                class="flex flex-col items-center gap-1.5 transition-colors text-blue-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path
+                        d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                    </path>
+                </svg>
+                <span class="text-[10px] font-bold">Scan</span>
+            </button>
+            <button onclick="switchTab('search')" id="nav-search"
+                class="flex flex-col items-center gap-1.5 transition-colors text-gray-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <span class="text-[10px] font-bold">Search</span>
+            </button>
+            <button class="flex flex-col items-center gap-1.5 text-gray-200 cursor-not-allowed">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path
+                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
+                    </path>
+                </svg>
+                <span class="text-[10px] font-bold">Message</span>
+            </button>
+        </div>
+    </nav>
+
+    <div id="result-modal" class="fixed inset-0 bg-black/60 hidden z-50 flex items-end backdrop-blur-sm"
+        onclick="if(event.target === this) closeResult()">
+        <div id="modal-content"
+            class="bg-white w-full max-w-md mx-auto rounded-t-[2.5rem] p-6 pb-10 shadow-2xl translate-y-full">
+            <div class="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-8"></div>
+
+            <div class="mb-8">
+                <p class="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1">Detection Completed</p>
+                <h3 id="display-name" class="text-2xl font-black text-gray-900 leading-tight">読み取り中...</h3>
+                <p id="display-code" class="text-sm font-mono text-gray-400 mt-1"></p>
+            </div>
+
+            <div class="space-y-6 mb-10">
+                <div id="new-item-form" class="hidden animate-in fade-in slide-in-from-top-2">
+                    <label
+                        class="text-[11px] font-bold text-gray-400 uppercase tracking-widest block mb-2">新規商品名</label>
+                    <input type="text" id="input-name" placeholder="商品名を入力..."
+                        class="w-full border-b-2 border-gray-100 py-2 focus:border-blue-500 outline-none text-lg font-medium transition-colors">
+                </div>
+                <div>
+                    <label
+                        class="text-[11px] font-bold text-gray-400 uppercase tracking-widest block mb-2">現在の在庫数</label>
+                    <input type="number" inputmode="numeric" id="input-qty"
+                        class="w-full border-b-2 border-gray-100 py-2 focus:border-blue-500 outline-none text-4xl font-black text-blue-600 transition-colors">
+                </div>
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="closeResult()" class="flex-1 py-4 text-gray-400 font-bold text-sm">キャンセル</button>
+                <button id="update-btn" onclick="handleUpdate()"
+                    class="flex-[2] bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200 active:scale-95 transition-all disabled:opacity-50">更新する</button>
+            </div>
         </div>
     </div>
 
-    <!-- Notification Toast -->
     <div id="toast"
-        class="fixed bottom-6 left-1/2 transform -translate-x-1/2 translate-y-20 opacity-0 bg-gray-900/90 backdrop-blur text-white px-6 py-3 rounded-full transition-all duration-300 shadow-xl flex items-center gap-2 z-50">
+        class="fixed top-12 left-1/2 -translate-x-1/2 bg-gray-900/90 text-white px-6 py-3 rounded-full text-sm font-bold shadow-xl opacity-0 translate-y-[-20px] transition-all duration-300 pointer-events-none z-[100] backdrop-blur">
         <span id="toast-message"></span>
     </div>
 
     <script>
-        // version.jsを「キャッシュを無視して」強制的に最新で読み込む
-        const script = document.createElement('script');
-        // 現在時刻をハッシュとして付けることで、ブラウザに「新しいファイルだ」と思わせる
-        script.src = 'version.js?update=' + new Date().getTime();
-        document.head.appendChild(script);
+        // Version management
+        const versionScript = document.createElement('script');
+        versionScript.src = 'version.js?v=' + Date.now();
+        document.head.appendChild(versionScript);
+        versionScript.onload = () => { if (document.getElementById('version')) document.getElementById('version').innerText = APP_VERSION; };
 
-        // version.jsの読み込みが完了した瞬間に実行される
-        script.onload = () => {
-            // 画面のバージョン表示を更新
-            const versionElement = document.getElementById('version');
-            if (versionElement) versionElement.innerText = APP_VERSION;
-
-            console.log("アプリ起動:", APP_VERSION);
-        };
-    </script>
-
-    <script>
-
+        // App State
         let productMaster = {};
         let inventoryData = {};
         let currentCode = null;
         let isScannerRunning = false;
-
         let detectionBuffer = [];
 
-        const resultCard = document.getElementById('result-card');
-        const modalBackdrop = document.getElementById('modal-backdrop');
-        const displayName = document.getElementById('display-name');
-        const displayCode = document.getElementById('display-code');
-        const inputName = document.getElementById('input-name');
-        const newItemForm = document.getElementById('new-item-form');
-        const inputQty = document.getElementById('input-qty');
+        // UI Elements
         const inventoryList = document.getElementById('inventory-list');
         const listCount = document.getElementById('list-count');
-        const updateBtn = document.getElementById('update-btn');
         const searchInput = document.getElementById('search-input');
+        const updateBtn = document.getElementById('update-btn');
+        const resultModal = document.getElementById('result-modal');
+        const modalContent = document.getElementById('modal-content');
+        const inputQty = document.getElementById('input-qty');
+        const inputName = document.getElementById('input-name');
 
-        window.onload = loadSpreadsheetData;
-        document.getElementById('start-btn').addEventListener('click', toggleScanner);
-        updateBtn.addEventListener('click', handleUpdate);
-        searchInput.addEventListener('input', (e) => updateUIList(e.target.value));
+        // タブ切り替え
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
 
-        // --- 数量入力欄：自分にフォーカスが来たら何が何でも全選択する ---
-        inputQty.addEventListener('focus', function () {
-            // 0.1秒待つのがコツ（ブラウザのフォーカス処理とぶつからないようにする）
-            setTimeout(() => {
-                this.select();
-                if (typeof this.setSelectionRange === 'function') {
-                    this.setSelectionRange(0, 9999);
-                }
-            }, 100);
-        });
+            const navScan = document.getElementById('nav-scan');
+            const navSearch = document.getElementById('nav-search');
 
-        // --- 商品名入力欄：Enterで数量へ移動（全選択は上のfocusリスナーが担当する） ---
-        inputName.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                e.stopPropagation();
-                inputQty.focus();
+            if (tab === 'scan') {
+                navScan.classList.add('text-blue-600'); navScan.classList.remove('text-gray-400');
+                navSearch.classList.add('text-gray-400'); navSearch.classList.remove('text-blue-600');
+            } else {
+                navSearch.classList.add('text-blue-600'); navSearch.classList.remove('text-gray-400');
+                navScan.classList.add('text-gray-400'); navScan.classList.remove('text-blue-600');
+                if (isScannerRunning) stopScanner();
+                updateUIList(searchInput.value);
             }
-        });
+        }
 
-        // --- 数量入力欄：Enterで確定（キーボードを閉じる） ---
-        inputQty.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                // 保存処理があればここで呼ぶ
-                this.blur();
-            }
-        });
-
-        // --- 共通設定：次に移動する設定がない入力欄でEnterを押したら閉じる ---
-        document.querySelectorAll('input').forEach(input => {
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    setTimeout(() => {
-                        if (document.activeElement === input) {
-                            input.blur();
-                        }
-                    }, 100);
-                }
-            });
-        });
-
-
-
-
-        async function loadSpreadsheetData() {
-            if (!GAS_URL || GAS_URL.includes("YOUR_GAS")) {
-                showToast("GAS URL未設定");
-                return;
-            }
+        // 初期化
+        async function init() {
+            if (!GAS_URL) return showToast("GAS URLが設定されていません");
             try {
-                const response = await fetch(GAS_URL);
-                const data = await response.json();
+                const res = await fetch(GAS_URL);
+                const data = await res.json();
                 productMaster = data.master || {};
                 inventoryData = data.inventory || {};
                 updateStatus(true);
                 updateUIList();
             } catch (e) {
-                showToast("データ同期エラー");
+                showToast("データ同期失敗");
                 updateStatus(false);
             }
         }
@@ -279,78 +254,30 @@
         function updateStatus(isOnline) {
             const dot = document.getElementById('status-dot');
             const text = document.getElementById('status-text');
-            dot.className = `w-2 h-2 ${isOnline ? 'bg-green-500' : 'bg-red-500'} rounded-full mr-2`;
-            text.innerText = isOnline ? "同期済み" : "接続エラー";
-            text.className = isOnline ? "text-xs text-green-600" : "text-xs text-red-600";
+            dot.className = `w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-red-500'}`;
+            text.innerText = isOnline ? "同期済み" : "エラー";
+            text.className = isOnline ? "text-green-600" : "text-red-600";
         }
 
-        function toggleScanner() {
-            if (isScannerRunning) {
-                stopScanner();
-            } else {
-                startScanner();
-            }
-        }
+        // スキャナー制御
+        function toggleScanner() { isScannerRunning ? stopScanner() : startScanner(); }
 
         function startScanner() {
             Quagga.init({
-                numOfWorkers: navigator.hardwareConcurrency || 4,
                 inputStream: {
-                    name: "Live",
-                    type: "LiveStream",
-                    target: document.querySelector('#interactive'),
-                    constraints: {
-                        width: { min: 640, ideal: 1280 },
-                        height: { min: 480, ideal: 720 },
-                        facingMode: "environment",
-                        aspectRatio: { ideal: 1.7777777778 }
-                    },
+                    name: "Live", type: "LiveStream", target: "#interactive",
+                    constraints: { facingMode: "environment", aspectRatio: { ideal: 1 } }
                 },
-                locator: {
-                    patchSize: "medium",
-                    halfSample: true
-                },
-                decoder: {
-                    readers: ["ean_reader"],
-                    multiple: false
-                }
-            }, function (err) {
-                if (err) {
-                    showToast("カメラを起動できません");
-                    return;
-                }
+                decoder: { readers: ["ean_reader"] },
+                locator: { patchSize: "medium", halfSample: true }
+            }, (err) => {
+                if (err) return showToast("カメラ起動失敗");
                 Quagga.start();
                 isScannerRunning = true;
                 document.getElementById('start-btn').innerText = "カメラを停止";
                 document.getElementById('scanner-placeholder').style.display = 'none';
             });
-
-            Quagga.onProcessed(onProcessed);
             Quagga.onDetected(onDetected);
-        }
-
-        function onProcessed(result) {
-            let drawingCtx = Quagga.canvas.ctx.overlay,
-                drawingCanvas = Quagga.canvas.dom.overlay;
-
-            if (result) {
-                if (result.boxes) {
-                    drawingCtx.clearRect(0, 0, parseInt(drawingCanvas.getAttribute("width")), parseInt(drawingCanvas.getAttribute("height")));
-                    result.boxes.filter(function (box) {
-                        return box !== result.box;
-                    }).forEach(function (box) {
-                        Quagga.ImageDebug.drawPath(box, { x: 0, y: 1 }, drawingCtx, { color: "green", lineWidth: 2 });
-                    });
-                }
-
-                if (result.box) {
-                    Quagga.ImageDebug.drawPath(result.box, { x: 0, y: 1 }, drawingCtx, { color: "#00F", lineWidth: 2 });
-                }
-
-                if (result.codeResult && result.codeResult.code) {
-                    Quagga.ImageDebug.drawPath(result.line, { x: 'x', y: 'y' }, drawingCtx, { color: 'red', lineWidth: 3 });
-                }
-            }
         }
 
         function stopScanner() {
@@ -361,137 +288,82 @@
 
         function onDetected(data) {
             const code = data.codeResult.code;
-
             detectionBuffer.push(code);
-            if (detectionBuffer.length > 5) {
-                detectionBuffer.shift();
-            }
-
-            const count = detectionBuffer.filter(c => c === code).length;
-            if (count < 3) return;
+            if (detectionBuffer.length > 5) detectionBuffer.shift();
+            if (detectionBuffer.filter(c => c === code).length < 3) return;
 
             detectionBuffer = [];
             if (currentCode === code) return;
-
             stopScanner();
-            document.getElementById('start-btn').innerText = "スキャン再開";
             if (window.navigator.vibrate) window.navigator.vibrate(50);
-
             openManualUpdate(code);
         }
 
         function openManualUpdate(code) {
             currentCode = code;
-            displayCode.innerText = `JAN: ${code}`;
+            document.getElementById('display-code').innerText = code;
 
-            // 【ポイント】ここであらかじめ「空の入れ物」を作っておく
-            let targetInput = null;
-
+            let focusTarget = inputQty;
             if (productMaster[code]) {
-                displayName.innerText = productMaster[code];
-                newItemForm.classList.add('hidden');
+                document.getElementById('display-name').innerText = productMaster[code];
+                document.getElementById('new-item-form').classList.add('hidden');
                 inputQty.value = inventoryData[code] || 0;
-
-                // 登録済みなら数量
-                targetInput = inputQty;
             } else {
-                displayName.innerText = "未登録の商品";
-                newItemForm.classList.remove('hidden');
+                document.getElementById('display-name').innerText = "新規商品";
+                document.getElementById('new-item-form').classList.remove('hidden');
                 inputName.value = "";
                 inputQty.value = "";
-
-                // 未登録なら商品名
-                targetInput = inputName;
+                focusTarget = inputName;
             }
 
-            modalBackdrop.classList.remove('hidden');
-            resultCard.classList.remove('translate-y-full');
-
-            // 0.3秒後に、決まった方の入力欄にフォーカス！
+            resultModal.classList.remove('hidden');
             setTimeout(() => {
-                if (targetInput) {
-                    targetInput.focus();
-                    if (typeof targetInput.select === 'function') {
-                        targetInput.select();
-                    }
-                }
+                modalContent.classList.remove('translate-y-full');
+                focusTarget.focus();
+                if (focusTarget.select) focusTarget.select();
+            }, 50);
+        }
+
+        function closeResult() {
+            modalContent.classList.add('translate-y-full');
+            setTimeout(() => {
+                resultModal.classList.add('hidden');
+                currentCode = null;
             }, 300);
         }
 
-
-        function closeResult() {
-            modalBackdrop.classList.add('hidden');
-            resultCard.classList.add('translate-y-full');
-            currentCode = null;
-            detectionBuffer = [];
-        }
-
         async function handleUpdate() {
-            // 【重要】最初に変数にコピーしておく（closeResultでnullになるのを防ぐため）
             const targetCode = currentCode;
             const name = productMaster[targetCode] || inputName.value.trim();
             const qty = parseInt(inputQty.value) || 0;
 
-            if (!targetCode) {
-                showToast("エラー: JANコードが特定できません");
-                return;
-            }
-            if (!name) {
-                showToast("商品名を入力してください");
-                return;
-            }
+            if (!targetCode || !name) return showToast("入力内容を確認してください");
 
-            // --- 【1】先にメモリと画面を更新 ---
+            // 楽観的更新
             productMaster[targetCode] = name;
             inventoryData[targetCode] = qty;
-
-            // UIを更新（ここで targetCode を使うのでJANコードが消えない）
             updateUIList(searchInput.value);
-
-            // モーダルを閉じる（ここで currentCode は null になるが targetCode は無事）
             closeResult();
-            showToast("保存中...");
+            showToast("保存しています...");
 
             updateBtn.disabled = true;
-            updateBtn.innerText = "送信中...";
-
             try {
-                const response = await fetch(GAS_URL, {
+                const res = await fetch(GAS_URL, {
                     method: "POST",
-                    // ここも targetCode を使う
                     body: JSON.stringify({ code: targetCode, name: name, qty: qty }),
                     keepalive: true
                 });
-
-                if (!response.ok) throw new Error("HTTP error");
-
-                const result = await response.json();
-
-                if (result.status === "success") {
-                    showToast("更新が完了しました");
-                    console.log("GAS保存成功:", targetCode, qty);
-                } else {
-                    throw new Error(result.message);
-                }
+                if (!res.ok) throw new Error();
+                showToast("更新が完了しました");
             } catch (e) {
-                showToast("⚠️保存失敗（再試行してください）");
-                console.error("保存失敗:", e);
+                showToast("⚠️通信失敗（再試行してください）");
             } finally {
                 updateBtn.disabled = false;
-                updateBtn.innerText = "更新";
             }
         }
 
-        // 曖昧検索（表記揺れ吸収）用関数
         function normalizeString(str) {
-            if (!str) return '';
-            return str
-                .normalize('NFKC') // 全角英数→半角英数、半角カナ→全角カナ
-                .replace(/[\u3041-\u3096]/g, function (match) {
-                    // ひらがな→カタカナ変換
-                    return String.fromCharCode(match.charCodeAt(0) + 0x60);
-                })
-                .toLowerCase(); // 大文字→小文字
+            return (str || "").normalize('NFKC').replace(/[\u3041-\u3096]/g, m => String.fromCharCode(m.charCodeAt(0) + 0x60)).toLowerCase();
         }
 
         function updateUIList(query = '') {
@@ -499,46 +371,57 @@
             let entries = Object.entries(inventoryData);
 
             if (query.trim()) {
-                const normalizedQuery = normalizeString(query.trim());
-                entries = entries.filter(([code, _]) => {
-                    const name = productMaster[code] || "不明";
-                    const normalizedCode = normalizeString(code);
-                    const normalizedName = normalizeString(name);
-                    return normalizedCode.includes(normalizedQuery) || normalizedName.includes(normalizedQuery);
+                const q = normalizeString(query);
+                entries = entries.filter(([code]) => {
+                    const n = normalizeString(productMaster[code]);
+                    return code.includes(q) || n.includes(q);
                 });
             }
 
             listCount.innerText = `${entries.length}件`;
             if (entries.length === 0) {
-                inventoryList.innerHTML = '<li class="p-8 text-center text-gray-400 text-sm">該当なし</li>';
+                inventoryList.innerHTML = '<li class="p-12 text-center text-gray-300 text-sm font-medium">該当する商品はありません</li>';
                 return;
             }
+
             entries.sort((a, b) => b[1] - a[1]).forEach(([code, qty]) => {
-                const name = productMaster[code] || "不明";
+                const name = productMaster[code] || "未登録";
                 const li = document.createElement('li');
-                li.className = "p-4 flex justify-between items-center bg-white border-b border-gray-50 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors";
-                li.onpointerdown = (e) => e.preventDefault();
-                li.onclick = () => openManualUpdate(code);
+                li.className = "px-5 py-6 flex justify-between items-center bg-white active:bg-gray-50 transition-colors";
                 li.innerHTML = `
                     <div class="flex-1 min-w-0 pr-4 pointer-events-none">
-                        <p class="text-sm font-bold text-gray-800 truncate">${name}</p>
-                        <p class="text-xs text-gray-400 font-mono">${code}</p>
+                        <p class="text-[15px] font-bold text-gray-900 truncate">${name}</p>
+                        <p class="text-[11px] text-gray-400 font-mono mt-0.5 tracking-wider">${code}</p>
                     </div>
-                    <div class="text-right pointer-events-none shrink-0">
+                    <div class="text-right flex items-baseline gap-1 pointer-events-none">
                         <span class="text-2xl font-black ${qty === 0 ? 'text-red-500' : 'text-blue-600'}">${qty}</span>
-                        <span class="text-xs font-bold text-gray-400 ml-1">個</span>
+                        <span class="text-[10px] font-bold text-gray-400">個</span>
                     </div>
                 `;
+                li.onclick = () => openManualUpdate(code);
                 inventoryList.appendChild(li);
             });
         }
 
         function showToast(msg) {
-            const toast = document.getElementById('toast');
+            const t = document.getElementById('toast');
             document.getElementById('toast-message').innerText = msg;
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+            t.classList.replace('opacity-0', 'opacity-100');
+            t.classList.replace('translate-y-[-20px]', 'translate-y-0');
+            setTimeout(() => {
+                t.classList.replace('opacity-100', 'opacity-0');
+                t.classList.replace('translate-y-0', 'translate-y-[-20px]');
+            }, 3000);
         }
+
+        // Event Listeners
+        document.getElementById('start-btn').onclick = toggleScanner;
+        searchInput.oninput = (e) => updateUIList(e.target.value);
+        inputQty.onfocus = function () { setTimeout(() => this.select(), 100); };
+        inputName.onkeydown = (e) => { if (e.key === 'Enter') inputQty.focus(); };
+        inputQty.onkeydown = (e) => { if (e.key === 'Enter') handleUpdate(); };
+
+        init();
     </script>
 </body>
 
