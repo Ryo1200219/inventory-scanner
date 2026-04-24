@@ -197,7 +197,14 @@
         const versionScript = document.createElement('script');
         versionScript.src = 'version.js?v=' + Date.now();
         document.head.appendChild(versionScript);
-        versionScript.onload = () => { if (document.getElementById('version')) document.getElementById('version').innerText = APP_VERSION; };
+        // version.jsが読み終わってからすべてを開始する
+        versionScript.onload = () => {
+            if (document.getElementById('version')) {
+                document.getElementById('version').innerText = APP_VERSION;
+            }
+            // URLが確定したのでデータを取得しに行く
+            init();
+        };
 
         // App State
         let productMaster = {};
@@ -421,7 +428,6 @@
         inputName.onkeydown = (e) => { if (e.key === 'Enter') inputQty.focus(); };
         inputQty.onkeydown = (e) => { if (e.key === 'Enter') handleUpdate(); };
 
-        init();
     </script>
 </body>
 
