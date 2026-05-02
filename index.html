@@ -123,7 +123,7 @@
 
     </main>
 
-    <nav class="bg-white border-t border-gray-200 shrink-0 pb-safe">
+    <nav id="tabBar" class="border-t border-gray-200 shrink-0 pb-safe">
         <div class="flex justify-around items-center h-20">
             <button onclick="switchTab('scan')" id="nav-scan"
                 class="flex flex-col items-center gap-1.5 transition-colors text-blue-600">
@@ -241,6 +241,19 @@
                 updateUIList(searchInput.value);
             }
         }
+
+        // タブバー（ナビゲーション）の要素を取得
+        const tabBar = document.getElementById('tabBar');
+
+        // 検索窓にフォーカスした時：タブバーを隠す
+        searchInput.onfocus = () => {
+            tabBar.style.display = 'none';
+        };
+
+        // フォーカスが外れた時：タブバーを再表示する
+        searchInput.onblur = () => {
+            tabBar.style.display = 'block'; // 元の表示形式（flexやblock）に合わせてください
+        };
 
         // 初期化
         async function init() {
