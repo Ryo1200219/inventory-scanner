@@ -245,15 +245,33 @@
         // タブバー（ナビゲーション）の要素を取得
         const tabBar = document.getElementById('tabBar');
 
-        // 検索窓にフォーカスした時：タブバーを隠す
+        // 1. 検索窓の状態を監視
         searchInput.onfocus = () => {
-            tabBar.style.display = 'none';
+            tabBar.style.display = 'none'; // 入力に集中させる
         };
 
-        // フォーカスが外れた時：タブバーを再表示する
         searchInput.onblur = () => {
-            tabBar.style.display = 'block'; // 元の表示形式（flexやblock）に合わせてください
+            // フォーカスが外れたら基本は戻す
+            // ※少し遅延させるとガタつきが抑えられます
+            setTimeout(() => {
+                tabBar.style.display = 'block';
+            }, 100);
         };
+
+        // 2. Enterキー（完了）が押された時
+        searchInput.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                searchInput.blur(); // 明示的にフォーカスを外す（これでonblurも走る）
+            }
+        };
+
+        // 3. スクロール（結果を見ようとした時）
+        window.addEventListener('scroll', () => {
+            // 検索窓にフォーカスがある状態でスクロールしたら
+            if (document.activeElement === searchInput) {
+                searchInput.blur(); // キーボードを閉じてタブバーを戻す
+            }
+        }, { passive: true });
 
         // 初期化
         async function init() {
