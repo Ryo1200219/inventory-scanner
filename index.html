@@ -107,8 +107,10 @@
                 <li class="p-8 text-center text-gray-400 text-sm">データを同期しています...</li>
             </ul>
 
+
             <div class="absolute bottom-6 left-0 right-0 px-4 pointer-events-none">
                 <div class="relative max-w-md mx-auto pointer-events-auto">
+                    // 検索アイコン
                     <span class="absolute inset-y-0 left-4 flex items-center text-gray-400">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -266,7 +268,7 @@
         };
 
         // 3. スクロール（結果を見ようとした時）
-        window.addEventListener('scroll', () => {
+        inventoryList.addEventListener('scroll', () => {
             // 検索窓にフォーカスがある状態でスクロールしたら
             if (document.activeElement === searchInput) {
                 searchInput.blur(); // キーボードを閉じてタブバーを戻す
