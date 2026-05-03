@@ -86,11 +86,11 @@
             <div class="p-6 bg-gray-100 shrink-0">
                 <button id="start-btn"
                     class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <!-- <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
                         </path>
-                    </svg>
+                    </svg> -->
                     スキャン開始
                 </button>
             </div>
@@ -103,7 +103,7 @@
                     class="bg-gray-200 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold">0件</span>
             </div>
 
-            <ul id="inventory-list" class="flex-1 overflow-y-auto divide-y divide-gray-50 pb-24">
+            <ul id="inventory-list" class="flex-1 overflow-y-auto divide-y divide-gray-50 pb-48">
                 <li class="p-8 text-center text-gray-400 text-sm">データを同期しています...</li>
             </ul>
 
@@ -129,10 +129,10 @@
         <div class="flex justify-around items-center h-20">
             <button onclick="switchTab('scan')" id="nav-scan"
                 class="flex flex-col items-center gap-1.5 transition-colors text-blue-600">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <svg width="28" height="23" viewBox="0 0 28 23" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path
-                        d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
-                    </path>
+                        d="M4 2H2V21H4V23H0V0H4V2ZM28 23H24V21H26V2H24V0H28V23ZM7 19H5V4H7V19ZM11 19H9V4H11V19ZM15 19H13V4H15V19ZM19 19H17V4H19V19ZM23 19H21V4H23V19Z"
+                        fill="#555555" />
                 </svg>
                 <span class="text-[10px] font-bold">Scan</span>
             </button>
