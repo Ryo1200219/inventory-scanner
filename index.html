@@ -329,6 +329,8 @@
             Quagga.stop();
             isScannerRunning = false;
             document.getElementById('start-btn').innerText = "スキャン開始";
+            document.getElementById('scanner-placeholder').style.display = 'flex';
+            detectionBuffer = [];
         }
 
         function onDetected(data) {
