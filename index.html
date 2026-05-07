@@ -35,6 +35,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            z-index: 1;
         }
 
         .tab-content {
@@ -79,7 +80,7 @@
         <section id="tab-scan" class="tab-content active h-full bg-gray-900">
             <div id="interactive" class="viewport flex-1 relative">
                 <div id="scanner-placeholder"
-                    class="absolute inset-0 flex items-center justify-center text-white/50 text-sm">
+                    class="absolute inset-0 flex items-center justify-center text-white/50 text-sm bg-black z-10">
                     カメラを起動してください
                 </div>
             </div>
