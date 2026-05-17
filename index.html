@@ -176,7 +176,7 @@
                 <div id="new-item-form" class="hidden animate-in fade-in slide-in-from-top-2">
                     <label
                         class="text-[11px] font-bold text-gray-400 uppercase tracking-widest block mb-2">新規商品名</label>
-                    <input type="text" id="input-name" placeholder="商品名を入力..."
+                    <input type="search" id="input-name" placeholder="商品名を入力..."
                         class="w-full border-b-2 border-gray-100 py-2 focus:border-blue-500 outline-none text-lg font-medium transition-colors">
                 </div>
                 <div>
@@ -469,6 +469,15 @@
         inputName.onkeydown = (e) => { if (e.key === 'Enter') inputQty.focus(); };
         inputQty.onkeydown = (e) => { if (e.key === 'Enter') handleUpdate(); };
 
+
+        // サービスワーカーの登録処理を追加
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered!', reg))
+                    .catch(err => console.error('SW register failed:', err));
+            });
+        }
     </script>
 </body>
 

@@ -8,12 +8,12 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "./inventory-scanner.png",
+      "src": "./by-scanner.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "./inventory-scanner.png",
+      "src": "./by-scanner.png",
       "sizes": "512x512",
       "type": "image/png"
     }
