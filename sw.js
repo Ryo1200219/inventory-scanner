@@ -4,7 +4,7 @@ const ASSETS_TO_CACHE = [
   './',                  // ルートもキャッシュに含めると安定します
   './index.html',
   './manifest.json',
-  './inventory-scanner.png',
+  './by-scanner.png',
   'https://unpkg.com/html5-qrcode'
 ];
 
