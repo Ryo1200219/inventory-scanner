@@ -75,6 +75,17 @@
         </div>
     </header>
 
+    <div id="install-banner"
+        class="hidden bg-blue-50 px-4 py-3 flex justify-between items-center border-b border-blue-200 shrink-0 z-20">
+        <div class="flex items-center gap-2">
+            <span class="text-sm font-bold text-blue-900">アプリとしてインストールできます</span>
+        </div>
+        <button id="install-btn"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md active:scale-95 transition-all">
+            インストール
+        </button>
+    </div>
+
     <main class="flex-1 relative overflow-hidden">
 
         <section id="tab-scan" class="tab-content active h-full bg-gray-900">
@@ -470,7 +481,50 @@
         inputQty.onkeydown = (e) => { if (e.key === 'Enter') handleUpdate(); };
 
 
-        // サービスワーカーの登録処理を追加
+        // --- PWA強制インストール制御 ---
+        let deferredPrompt;
+        const installBanner = document.getElementById('install-banner');
+        const installBtn = document.getElementById('install-btn');
+
+        // Chromeが「インストール可能」と判断したイベントをキャッチ
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // ブラウザ固有のミニバナーを非表示にする
+            e.preventDefault();
+            // イベントを保持
+            deferredPrompt = e;
+            // 自作のインストールバナーを表示
+            if (installBanner) {
+                installBanner.classList.remove('hidden');
+            }
+        });
+
+        // ボタンがクリックされた時の処理
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                // インストールダイアログを表示
+                deferredPrompt.prompt();
+                // ユーザーの選択を待つ
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`User response to the install prompt: ${outcome}`);
+                // 使用済みプロンプトをクリア
+                deferredPrompt = null;
+                // バナーを非表示にする
+                if (installBanner) {
+                    installBanner.classList.add('hidden');
+                }
+            });
+        }
+
+        // アプリとしてインストールが完了した時の処理
+        window.addEventListener('appinstalled', (reverse) => {
+            console.log('PWA was installed');
+            if (installBanner) {
+                installBanner.classList.add('hidden');
+            }
+        });
+
+        // サービスワーカーの登録（既存のまま）
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
